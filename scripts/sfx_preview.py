@@ -63,11 +63,16 @@ def card(path: Path, n: int, total: int, group: str, fam: str, name: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--out", default="sfx_preview.mp4")
+    ap.add_argument("--groups", nargs="*", help="VIRAL TREND CB (default: all)")
     a = ap.parse_args()
     out = Path(a.out).resolve()
     work = out.with_suffix("")
     work.mkdir(parents=True, exist_ok=True)
     items = collect()
+    if a.groups:
+        want = {"CB": "CƠ BẢN"}
+        keep = {want.get(g.upper(), g.upper()) for g in a.groups}
+        items = [x for x in items if x[0] in keep]
     lst, index = [], {}
     for n, (group, fam, name, f) in enumerate(items, 1):
         try:

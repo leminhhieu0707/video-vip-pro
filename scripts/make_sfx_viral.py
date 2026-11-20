@@ -216,11 +216,73 @@ FAMILIES = {"data": (fx_data, 6), "charge": (fx_charge, 4), "click": (fx_click, 
             "dwhoosh": (fx_dwhoosh, 4), "thump": (fx_thump, 3)}
 
 
-def write(path: Path, y: np.ndarray):
-    y = norm(np.nan_to_num(y))
-    fade = min(len(y), int(0.01 * SR))
-    y[-fade:] *= np.linspace(1, 0, fade)
-    st = np.stack([y, y], axis=1)
+# ---------------------------------------------------------------- "expensive" polish (v2)
+# Pro SFX packs sound wide, glued and glossy: stereo spread, a short plate tail, soft saturation, a sub layer under
+# hits and an air shelf on top. Every sound goes through this chain before it is written.
+_IR = None
+
+
+def plate_ir(seconds=0.45, seed=7):
+    global _IR
+    if _IR is None:
+        rng = np.random.default_rng(seed)
+        n = int(SR * seconds)
+        t = np.arange(n) / SR
+        noise = rng.normal(0, 1, (2, n))
+        decay = np.exp(-t / (seconds / 5.5))
+        bright = np.exp(-t / (seconds / 2.5))                    # highs die faster than lows, like a real plate
+        lo = np.array([np.convolve(ch, np.ones(6) / 6, "same") for ch in noise])
+        ir = (lo * decay + (noise - lo) * bright * decay) * 0.6
+        ir[:, :int(0.004 * SR)] = 0                                # 4 ms pre-delay
+        _IR = ir / np.sqrt((ir ** 2).sum(axis=1, keepdims=True))
+    return _IR
+
+
+def fft_conv(x, h):
+    n = len(x) + len(h) - 1
+    m = 1 << (n - 1).bit_length()
+    return np.fft.irfft(np.fft.rfft(x, m) * np.fft.rfft(h, m), m)[:n]
+
+
+def shelf_air(x, amount=0.35):
+    """+high shelf: add back a high-passed copy (sheen above ~6 kHz)."""
+    return x + amount * hp(x, 0.55)
+
+
+def polish(y: np.ndarray, fam: str, rng) -> np.ndarray:
+    y = np.nan_to_num(y.astype(np.float64))
+    y = y / (np.max(np.abs(y)) or 1.0)
+    y = np.tanh(1.6 * y) / np.tanh(1.6)                           # soft saturation = density
+    y = shelf_air(y, 0.25 if fam in ("thump", "charge") else 0.4)
+    if fam in ("charge", "stutter", "cutout", "flash"):           # sub layer under hits
+        sub = fx_thump(rng, 0.35) * (0.45 if fam != "stutter" else 0.3)
+        y = np.concatenate([y, np.zeros(max(0, len(sub) - len(y)))])
+        y[:len(sub)] += sub
+    # stereo: Haas-style decorrelation (different tiny delays + slight detune of the side signal)
+    dl, dr = int(SR * rng.uniform(0.0003, 0.0009)), int(SR * rng.uniform(0.0011, 0.0019))
+    pad = np.zeros(dr + 1)
+    L = np.concatenate([np.zeros(dl), y, pad])[:len(y) + dr + 1]
+    R = np.concatenate([np.zeros(dr), y, pad])[:len(y) + dr + 1]
+    side = hp(np.concatenate([y, pad]), 0.8) * 0.18
+    st = np.stack([L + side, R - side])
+    wet = {"thump": 0.06, "data": 0.14, "stutter": 0.12, "click": 0.1}.get(fam, 0.18)
+    ir = plate_ir()
+    tail = np.stack([fft_conv(st[0], ir[0]), fft_conv(st[1], ir[1])])
+    out = np.zeros((2, tail.shape[1]))
+    out[:, :st.shape[1]] += st
+    out += wet * tail
+    # trim the inaudible end, gentle fade
+    lvl = np.abs(out).max(axis=0)
+    last = int(np.nonzero(lvl > lvl.max() * 0.002)[0][-1]) + int(0.02 * SR)
+    out = out[:, :min(out.shape[1], last)]
+    f = min(out.shape[1], int(0.03 * SR))
+    out[:, -f:] *= np.linspace(1, 0, f)
+    return out / (np.max(np.abs(out)) or 1.0) * 0.89
+
+
+def write(path: Path, y: np.ndarray, fam: str = "", rng=None):
+    rng = rng if rng is not None else np.random.default_rng(1)
+    st = polish(y, fam, rng).T
     with wave.open(str(path), "wb") as w:
         w.setnchannels(2)
         w.setsampwidth(2)
@@ -238,7 +300,7 @@ def main():
     for fam, (fn, count) in FAMILIES.items():
         for k in range(1, count + 1):
             rng = np.random.default_rng(1000 * k + len(fam))
-            write(out / f"viral_{fam}_{k}.wav", fn(rng))
+            write(out / f"viral_{fam}_{k}.wav", fn(rng), fam, np.random.default_rng(k))
             n += 1
     print(f"{n} viral sounds -> {out}")
 
