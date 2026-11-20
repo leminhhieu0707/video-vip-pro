@@ -23,7 +23,7 @@ from assgen import build_ass, resolve_pos  # noqa: E402
 import theme  # noqa: E402
 from common import FFMPEG, has_nvenc, load_json, parse_time, probe, run, save_json, video_codec_args  # noqa: E402
 
-SEG_VERSION = 6  # bump when segment normalization changes, to invalidate cached segments
+SEG_VERSION = 8  # bump when segment normalization changes, to invalidate cached segments
 ASPECTS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "1:1": (1080, 1080), "4:5": (1080, 1350),
            "4:3": (1440, 1080), "3:4": (1080, 1440)}
 XFADES = {"fade", "fadeblack", "fadewhite", "dissolve", "wipeleft", "wiperight", "wipeup", "wipedown",
