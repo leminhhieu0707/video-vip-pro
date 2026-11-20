@@ -86,6 +86,9 @@ GRADES = {
     "pastel": ["eq=brightness=0.04:contrast=0.94:saturation=0.85:gamma=1.06"],
     # beauty/studio kiểu Hàn: sáng, mềm, da hồng hào, nền trắng sạch
     "han_min": ["eq=brightness=0.03:contrast=0.98:gamma=1.05", "colorbalance=rm=0.025:bm=0.02:gh=-0.01", "vibrance=intensity=0.08"],
+    # appetizing food / restaurant: warm mids, richer colour without neon, a touch of clarity, soft vignette
+    "food": ["colorbalance=rm=0.03:bm=-0.03:rh=0.02:bh=-0.02", "eq=contrast=1.07:gamma=0.98:saturation=1.04",
+             "vibrance=intensity=0.18", "unsharp=5:5:0.45:5:5:0", "vignette=angle=PI/7"],
     "moody": ["eq=brightness=-0.03:contrast=1.12:saturation=0.82", "colorbalance=bs=0.05:bh=-0.03"],
     "bw": ["hue=s=0", "eq=contrast=1.15"],
 }

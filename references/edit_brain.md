@@ -49,7 +49,12 @@ On top of that, add the sounds that carry the story by hand:
 - **Comedy only when it is funny:** `laugh` and `cartoon` only on a real joke, at most twice per video.
 - **Volumes:** UI 0.14–0.2, impacts 0.18–0.24, risers 0.1–0.14. Speech always stays on top.
 
-Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon. Use `"boom:3"` for one fixed variant.
+Denser creator mix: `"sound_design": {"style": "trend", "cuts": true, "captions": true}` adds a soft whoosh on every cut (`cut_volume` 0.09) and a light pop on captions that have a **keyword**.
+Food / restaurant videos: put ASMR on the exact words, e.g. `crunch` on "giòn", `pour` on "nước chấm" or "canh", plus `["whoosh", "camera"]` on each dish card. Grade them with `"grade": "food"`.
+Never put motion blur on the very first frame of a video: use `"blur": false` on the hook zoom, otherwise it reads as a glitch.
+Text "behind" the speaker needs a plain background behind the head. Glowing logos and bright signs get matted as foreground and cut through the text, so skip `behind` on those shots.
+
+Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon, crunch, pour (food ASMR). Use `"boom:3"` for one fixed variant.
 
 ## 5. Write the storyboard first
 In `build_vip.py`, before the code, write a table: one row per sentence, with columns **time | words | visual | effect | camera | sound**. Then implement exactly that table. A builder that is a list of `motion(...)` calls without a storyboard almost always ends up formulaic.

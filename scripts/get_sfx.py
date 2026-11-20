@@ -5,7 +5,8 @@ every user runs this once:   python get_sfx.py [--per 8]
 Writes assets/sfx/pack/<family>_<n>_<slug>.mp3 + assets/sfx/pack/index.json.
 In plans you then write a FAMILY name and render.py rotates through its variants so the same sound never repeats
 back to back:  "boom", "whoosh", "pop", "sparkle", "ding", "hit", "riser", "glitch", "camera", "typing", "cash",
-"click", "drumroll", "swipe", "bling", "laugh", "applause", "cartoon", "game".  "boom:3" = a fixed variant.
+"click", "drumroll", "swipe", "bling", "laugh", "applause", "cartoon", "game",
+"crunch", "sizzle", "pour" (food ASMR).  "boom:3" = a fixed variant.
 Mixkit licence: https://mixkit.co/license/#sfxFree
 """
 from __future__ import annotations
@@ -41,6 +42,10 @@ FAMILIES = {
     "laugh": (["laugh"], 4.0, ["laugh"], ["evil", "scary"]),
     "applause": (["applause"], 5.0, ["applause", "clap", "cheer"], []),
     "cartoon": (["cartoon"], 2.0, ["boing", "pop", "spring", "slide", "bonk"], []),
+    # food ASMR (food / restaurant / cooking videos)
+    "crunch": (["crunch", "bite", "chewing"], 3.0, ["crunch", "crisp", "bite", "chew", "munch"], ["dog", "monster"]),
+    "sizzle": (["sizzle", "fry", "frying"], 6.0, ["sizzl", "fry", "frying", "grill", "pan"], []),
+    "pour": (["pouring", "drink"], 5.0, ["pour", "liquid", "glass", "water", "drink"], ["toilet"]),
 }
 
 

@@ -101,8 +101,21 @@ def layers(spec) -> list[tuple[str, float, float | None]]:
 
 
 def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
-    """Automatic sounds for every effect: [(family, timeline_time, volume)]."""
+    """Automatic sounds for every effect: [(family, timeline_time, volume)].
+    "sound_design": "trend" (effects + zooms) or {"style": "trend", "cuts": true, "captions": true} for a denser
+    creator mix: a soft whoosh on every cut and a light pop on captions that have a **keyword**."""
+    sd = plan.get("sound_design")
+    opts = sd if isinstance(sd, dict) else {}
     out = []
+    if opts.get("cuts"):
+        clips = plan.get("clips", []) or []
+        for i in range(1, len(clips)):
+            if clips[i - 1]["out"] - clips[i - 1]["in"] >= 0.8:
+                out.append(("whoosh", starts[i] - 0.12, float(opts.get("cut_volume", 0.09))))
+    if opts.get("captions"):
+        for o in plan.get("overlays", []) or []:
+            if o.get("comp") == "BlueText" and "**" in str((o.get("props") or {}).get("text", "")) and "sfx" not in o:
+                out.append(("pop", float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0) + 0.05, 0.1))
     for o in plan.get("overlays", []) or []:
         if "sfx" in o:  # explicit: null = silent, name/list = handled as a plan sound
             continue
