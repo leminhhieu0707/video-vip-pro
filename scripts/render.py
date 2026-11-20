@@ -465,6 +465,7 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
     Long library sounds (applause, ticking, laughs) are cut to max_len with a fade-out."""
     root = Path(plan.get("_root", "."))
     import sound
+    gain = float(plan.get("sfx_gain", 6.0 if plan.get("sound_design") else 1.0))  # effect level vs. the voice
     fb = lambda n: resolve_sfx(n, root)  # noqa: E731
     ev = []
     for s in plan.get("sfx", []) or []:
@@ -472,7 +473,7 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
         for name, off, _ in sound.layers(s["sfx"]):
             f = sound.pick(name, fb)
             if f:
-                ev.append((f, at0 + off, float(s.get("volume", 0.3)), float(s.get("len", 3.0))))
+                ev.append((f, at0 + off, float(s.get("volume", 0.3)) * gain, float(s.get("len", 3.0))))
     # overlays that name their own sound ("sfx": "boom" or ["whoosh", "boom"])
     if plan.get("sound_design"):
         for o in plan.get("overlays", []) or []:
@@ -481,14 +482,14 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
                 for name, off, _ in sound.layers(o["sfx"]):
                     f = sound.pick(name, fb)
                     if f:
-                        ev.append((f, at0 + off, float(o.get("sfx_volume", 0.2)), 3.0))
+                        ev.append((f, at0 + off, float(o.get("sfx_volume", 0.2)) * gain, 3.0))
         taken = [e[1] for e in ev]
         for fam, at, vol in sound.design(plan, starts):
             if any(abs(at - t) < 0.12 for t in taken):  # the builder already put a sound here
                 continue
             f = sound.pick(fam, fb)
             if f:
-                ev.append((f, at, vol, 2.5))
+                ev.append((f, at, vol * gain, 2.5))
     auto = plan.get("auto_sfx")
     if auto:
         cfg = {**AUTO_SFX_DEFAULTS, **(auto if isinstance(auto, dict) else {})}
@@ -786,10 +787,13 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
             n += 1
         fc.append(f"{''.join(labels)}amix=inputs={len(labels)}:duration=longest:normalize=0,"
                   f"volume={float((plan.get('auto_sfx') or {}).get('master', 1.0)) if isinstance(plan.get('auto_sfx'), dict) else 1.0},"
-                  f"alimiter=limit=0.5:level=disabled[sfxall]")
+                  f"alimiter=limit={0.9 if plan.get('sound_design') else 0.5}:level=disabled[sfxall]")
         # sound effects duck under the voice (never cover words), then mix
         fc.append(f"{voice}asplit=2[vmix][vkey]")
-        fc.append("[sfxall][vkey]sidechaincompress=threshold=0.015:ratio=8:attack=5:release=250:makeup=1[sfxduck]")
+        # creator-style mixes keep effects audible over speech: gentle ducking when a sound design is on
+        dk = plan.get("sfx_duck") or ({"threshold": 0.06, "ratio": 2} if plan.get("sound_design") else {"threshold": 0.015, "ratio": 8})
+        fc.append(f"[sfxall][vkey]sidechaincompress=threshold={dk.get('threshold', 0.06)}:ratio={dk.get('ratio', 2)}:"
+                  f"attack=5:release=200:makeup=1[sfxduck]")
         fc.append("[vmix][sfxduck]amix=inputs=2:duration=first:normalize=0[withsfx]")
         voice = "[withsfx]"
     achain = []

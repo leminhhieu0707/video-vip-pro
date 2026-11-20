@@ -47,7 +47,8 @@ On top of that, add the sounds that carry the story by hand:
 - **Hits sit on the beat:** snap SFX and cuts to `beats.py` times when there is music.
 - **Price / number:** `riser`, then `ding`, then `cash` for sales; plain `ding` for information.
 - **Comedy only when it is funny:** `laugh` and `cartoon` only on a real joke, at most twice per video.
-- **Volumes:** UI 0.14–0.2, impacts 0.18–0.24, risers 0.1–0.14. Speech always stays on top.
+- **Volumes:** these are the numbers written in plans (UI 0.14–0.2, impacts 0.18–0.24, risers 0.1–0.14). With a sound design on, render.py multiplies them by `sfx_gain` (default 6) and ducks effects only gently under speech (`sfx_duck` threshold 0.06, ratio 2). The aim is the creator mix: effects about 7 dB under the voice on average, and big hits above it.
+- **Check that you can hear them.** Render an SFX-only copy (`"audio": {"original_volume": 0, "normalize": null}`) and a voice-only copy, then compare 100 ms RMS. If the effects sit 12 dB or more under the voice, nobody will hear them.
 
 **Viral style** (the tech sound design of top short-form editors, e.g. "Viral Editor SFX Pack"-type channels): `"sound_design": {"style": "viral", "cuts": true, "captions": true}`. This style swaps every effect to a synthesized tech set from `make_sfx_viral.py`, which is always installed and safe to ship in apps:
 - **charge-up:** a camera-flash whine that lands on snap zooms and giant text;
