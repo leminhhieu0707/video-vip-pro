@@ -23,8 +23,8 @@ VI = {"data": "bíp dữ liệu", "charge": "sạc flash rít lên", "click": "c
       "riser": "kéo lên", "glitch": "glitch", "camera": "chụp ảnh", "typing": "gõ phím", "cash": "tiền", "drumroll": "trống dồn",
       "swipe": "quẹt", "game": "game", "laugh": "cười", "applause": "vỗ tay", "cartoon": "hoạt hình", "crunch": "giòn rụm",
       "pour": "rót nước", "page": "lật trang", "paper": "giấy", "mouse": "click chuột",
-      "keyboard": "bàn phím", "phone": "điện thoại", "kaching": "ka-ching tiền", "pen": "bút viết"}
-GROUP_COLOR = {"VIRAL": (49, 88, 255), "TREND": (232, 184, 74), "CƠ BẢN": (90, 98, 120)}
+      "keyboard": "bàn phím", "phone": "điện thoại", "kaching": "ka-ching tiền", "pen": "bút viết", "meme": "meme", "misc": "khác"}
+GROUP_COLOR = {"CỦA HIẾU": (229, 48, 60), "VIRAL": (49, 88, 255), "TREND": (232, 184, 74), "CƠ BẢN": (90, 98, 120)}
 
 
 def collect():
@@ -39,6 +39,11 @@ def collect():
                 p = SFX / "pack" / x["file"]
                 if p.exists():
                     items.append(("TREND", fam, x["title"], p))
+    mi = SFX / "mine" / "index.json"
+    if mi.exists():
+        for fam, files in json.loads(mi.read_text(encoding="utf-8")).items():
+            for x in files:
+                items.append(("CỦA HIẾU", fam, x["title"], SFX / "mine" / x["file"]))
     for f in sorted(SFX.glob("*.wav")):
         if not f.stem.startswith("viral_"):
             items.append(("CƠ BẢN", f.stem.rstrip("0123456789_"), f.stem, f))

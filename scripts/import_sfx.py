@@ -21,6 +21,7 @@ MINE = Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"
 EXT = {".wav", ".mp3", ".aif", ".aiff", ".flac", ".ogg", ".m4a"}
 # family: keywords (checked against "folder/file" lower-case, first match wins — specific before generic)
 RULES = [
+    ("meme", ["meme", "sus", "fart", "bruh", "vine boom", "wait a minute", "woah", "wooo", "what", "goofy", "huh"]),
     ("charge", ["charge", "charging", "flash charge", "sạc"]),
     ("stutter", ["stutter", "stuttering"]),
     ("data", ["data", "computer", "digital ui", "hud", "beep", "bip", "dữ liệu"]),
@@ -85,6 +86,9 @@ def main():
     added = {}
     for p in sorted(src.rglob("*")):
         if p.suffix.lower() not in EXT or str(p) in seen:
+            continue
+        base = re.sub(r" \(\d+\)$", "", p.stem)
+        if base != p.stem and (p.with_name(base + p.suffix)).exists():  # browser duplicate "name (1).mp3" of a file we have
             continue
         rel = str(p.relative_to(src)).replace("\\", "/")
         if re.search(r"(^|/)(nhac|nhạc|music|bgm)", rel.lower()):

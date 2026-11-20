@@ -132,10 +132,13 @@ def pick(name: str, fallback) -> Path | None:
     The user's own library (assets/sfx/mine, import_sfx.py) is used first, then the trend pack, then synthesized."""
     fam, _, n = str(name).partition(":")
     own = mine().get(fam) or (mine().get(ALIAS[fam]) if fam in ALIAS else None)
-    if own and not n:
-        i = _turn.get("mine_" + fam, 0)
-        _turn["mine_" + fam] = i + 1
-        q = MINE / own[i % len(own)]["file"]
+    if own:
+        if n.isdigit():
+            q = MINE / own[(int(n) - 1) % len(own)]["file"]
+        else:
+            i = _turn.get("mine_" + fam, 0)
+            _turn["mine_" + fam] = i + 1
+            q = MINE / own[i % len(own)]["file"]
         if q.exists():
             return q
     if fam not in index() and ALIAS.get(fam) in index():

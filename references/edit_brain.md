@@ -93,6 +93,8 @@ Text "behind" the speaker needs a plain background behind the head. Glowing logo
 
   Lip sync is unchanged. Denoise each file first.
 
+**User library first.** Sounds the user imported with `scripts/import_sfx.py <folder>` go to `assets/sfx/mine` (git-ignored, local only). `sound.pick` uses them before the pack and the synthesized sets, and `"meme:5"` picks variant 5 of the user's own `meme` family. Meme stingers (what?, vine boom, woah, sus) go only on a real punchline or surprise, at most 2–3 per video.
+
 Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon, crunch, pour (food ASMR), page (lật trang), paper, mouse, keyboard, phone, kaching, pen (bút viết). Use `"boom:3"` for one fixed variant.
 
 ## 5. Write the storyboard first
