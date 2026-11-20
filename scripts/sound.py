@@ -17,7 +17,9 @@ from pathlib import Path
 import os
 
 PACK = Path(os.environ["MH_SFX_PACK"]) if os.environ.get("MH_SFX_PACK") else     Path(__file__).resolve().parent.parent / "assets" / "sfx" / "pack"
+MINE = Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"   # user's own sounds (import_sfx.py)
 _index: dict | None = None
+_mine: dict | None = None
 _turn: dict[str, int] = {}
 
 # what each effect sounds like: [(family, offset seconds, volume)]  — offsets < 0 land before the visual
@@ -117,9 +119,25 @@ VIRAL_TYPE = {"frost": [("dwhoosh", -0.12, 0.16)], "bg": [("cutout", 0.0, 0.18)]
 VIRAL_FX = {"vhs": [("flicker", 0.0, 0.2)], "film": [("flash", 0.0, 0.12)], "bw": [("flash", 0.0, 0.12)]}
 
 
+def mine() -> dict:
+    global _mine
+    if _mine is None:
+        p = MINE / "index.json"
+        _mine = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    return _mine
+
+
 def pick(name: str, fallback) -> Path | None:
-    """Family name -> next variant file (rotates); 'family:n' -> that variant; anything else -> fallback(name)."""
+    """Family name -> next variant file (rotates); 'family:n' -> that variant; anything else -> fallback(name).
+    The user's own library (assets/sfx/mine, import_sfx.py) is used first, then the trend pack, then synthesized."""
     fam, _, n = str(name).partition(":")
+    own = mine().get(fam) or (mine().get(ALIAS[fam]) if fam in ALIAS else None)
+    if own and not n:
+        i = _turn.get("mine_" + fam, 0)
+        _turn["mine_" + fam] = i + 1
+        q = MINE / own[i % len(own)]["file"]
+        if q.exists():
+            return q
     if fam not in index() and ALIAS.get(fam) in index():
         fam = ALIAS[fam]
     files = index().get(fam)
