@@ -25,35 +25,35 @@ SOUND_MAP: dict[str, list[tuple[str, float, float]]] = {
     # text / captions
     "BlueText": [], "BlueBig": [("whoosh", -0.1, 0.18), ("boom", 0.0, 0.16)], "GiantCaption": [("whoosh", -0.12, 0.2), ("boom", 0.0, 0.2)],
     "KineticTitle": [("whoosh", -0.05, 0.16)], "GravityText": [("hit", 0.25, 0.18)], "Stamp": [("hit", 0.1, 0.22), ("boom", 0.1, 0.16)],
-    "SplitFlap": [("click", 0.0, 0.2), ("click", 0.25, 0.16)], "Highlighter": [("swipe", 0.05, 0.16)], "CircleDraw": [("swipe", 0.0, 0.16)],
-    "NumberTitle": [("whoosh", -0.05, 0.16)], "TitleCard": [("whoosh", -0.1, 0.2), ("boom", 0.05, 0.18)],
+    "SplitFlap": [("click", 0.0, 0.2), ("click", 0.25, 0.16)], "Highlighter": [("pen", 0.05, 0.18)], "CircleDraw": [("pen", 0.0, 0.18)],
+    "NumberTitle": [("whoosh", -0.05, 0.16)], "TitleCard": [("page", -0.05, 0.16), ("boom", 0.05, 0.16)],
     "Intertitle": [("whoosh", -0.05, 0.16)],
     # lists / data
     "Tiles": [("pop", 0.0, 0.18)], "Checklist": [("pop", 0.0, 0.16)], "NumberList": [("whoosh", -0.1, 0.18)],
-    "CountUp": [("riser", 0.0, 0.12), ("ding", 0.95, 0.2)], "BarChart": [("whoosh", -0.05, 0.16), ("sparkle", 0.8, 0.14)],
+    "CountUp": [("riser", 0.0, 0.12), ("kaching", 0.95, 0.2)], "BarChart": [("whoosh", -0.05, 0.16), ("sparkle", 0.8, 0.14)],
     "BarChartRace": [("whoosh", -0.05, 0.16), ("ding", 1.2, 0.16)], "LineGraph": [("swipe", 0.1, 0.16), ("sparkle", 1.0, 0.14)],
     "VsCards": [("whoosh", -0.05, 0.18), ("hit", 0.35, 0.18)], "Callouts": [("pop", 0.1, 0.16)],
     "ConstellationHub": [("boom", 0.0, 0.16), ("sparkle", 0.4, 0.12)], "IconSlam": [("hit", 0.0, 0.2)],
     # UI
-    "IncomingCall": [("ding", 0.0, 0.2)], "NotifyStack": [("pop", 0.0, 0.18)], "ChatBubbles": [("pop", 0.0, 0.16)],
-    "CommentsDrop": [("pop", 0.0, 0.16)], "TypeBar": [("typing", 0.0, 0.14)], "Cursor": [("click", 0.6, 0.2)],
-    "FloatButton": [("click", 0.5, 0.2)], "FileDrop": [("whoosh", 0.0, 0.16), ("pop", 0.6, 0.16)], "FocusBrackets": [("camera", 0.0, 0.18)],
-    "ChapterPanel": [("whoosh", -0.05, 0.16)], "EditTimeline": [("click", 0.1, 0.14)], "JiggleChips": [("pop", 0.0, 0.16)],
+    "IncomingCall": [("phone", 0.0, 0.16)], "NotifyStack": [("pop", 0.0, 0.18)], "ChatBubbles": [("pop", 0.0, 0.16)],
+    "CommentsDrop": [("pop", 0.0, 0.16)], "TypeBar": [("keyboard", 0.0, 0.16)], "Cursor": [("mouse", 0.6, 0.22)],
+    "FloatButton": [("mouse", 0.5, 0.22)], "FileDrop": [("whoosh", 0.0, 0.16), ("pop", 0.6, 0.16)], "FocusBrackets": [("camera", 0.0, 0.18)],
+    "ChapterPanel": [("whoosh", -0.05, 0.16)], "EditTimeline": [("mouse", 0.1, 0.16)], "JiggleChips": [("pop", 0.0, 0.16)],
     "DeviceSplay": [("whoosh", -0.05, 0.18), ("pop", 0.35, 0.16), ("pop", 0.7, 0.16)], "ExplodedStack": [("whoosh", 0.0, 0.18), ("sparkle", 0.6, 0.12)],
     "PhoneFrame": [("whoosh", -0.05, 0.16)], "VideoCard": [("pop", 0.0, 0.16)], "ScreenCard": [("whoosh", -0.05, 0.16)],
     # stills / transitions
-    "Polaroids": [("camera", 0.0, 0.18)], "PostWall": [("whoosh", -0.05, 0.18), ("boom", 0.05, 0.14)], "CardStack": [("swipe", 0.0, 0.16)],
+    "Polaroids": [("camera", 0.0, 0.18)], "PostWall": [("whoosh", -0.05, 0.18), ("boom", 0.05, 0.14)], "CardStack": [("page", 0.0, 0.18)],
     "OrbitCarousel": [("whoosh", -0.05, 0.18), ("sparkle", 0.3, 0.12)], "VisionCarousel": [("whoosh", 0.0, 0.18), ("whoosh", 0.9, 0.12)],
-    "Newspaper": [("whoosh", -0.05, 0.18), ("hit", 0.2, 0.16)], "HeadlineWall": [("whoosh", -0.05, 0.18), ("pop", 0.3, 0.12)],
-    "TearAway": [("swipe", 0.08, 0.22)], "BlowAway": [("whoosh", 0.0, 0.2)], "InkSpread": [("whoosh", 0.0, 0.2), ("boom", 0.25, 0.14)],
+    "Newspaper": [("page", -0.05, 0.2), ("hit", 0.2, 0.14)], "HeadlineWall": [("whoosh", -0.05, 0.18), ("pop", 0.3, 0.12)],
+    "TearAway": [("paper", 0.05, 0.22)], "BlowAway": [("whoosh", 0.0, 0.2)], "InkSpread": [("whoosh", 0.0, 0.2), ("boom", 0.25, 0.14)],
     # effects
     "Shockwave": [("boom", 0.0, 0.22), ("whoosh", 0.05, 0.14)], "Cracks": [("hit", 0.0, 0.22), ("glitch", 0.05, 0.1)],
     "OrbitRing": [("sparkle", 0.0, 0.14)], "Portal": [("riser", -0.2, 0.12), ("boom", 0.4, 0.16)], "ScanLines": [("glitch", 0.0, 0.1)],
-    "VhsHud": [("glitch", 0.0, 0.2)], "DoodleStickers": [("sparkle", 0.0, 0.16), ("pop", 0.3, 0.14)], "ScriptPage": [("typing", 0.1, 0.12)],
-    "Eyedropper": [("click", 0.8, 0.18)], "CompareHandle": [("swipe", 0.2, 0.16)], "FollowCard": [("click", 0.9, 0.2), ("ding", 1.1, 0.16)],
+    "VhsHud": [("glitch", 0.0, 0.2)], "DoodleStickers": [("pen", 0.0, 0.16), ("sparkle", 0.3, 0.12)], "ScriptPage": [("page", 0.0, 0.16), ("keyboard", 0.3, 0.12)],
+    "Eyedropper": [("mouse", 0.8, 0.2)], "CompareHandle": [("swipe", 0.2, 0.16)], "FollowCard": [("mouse", 0.9, 0.22), ("ding", 1.1, 0.16)],
 }
-TYPE_MAP = {"frost": [("whoosh", -0.12, 0.18)], "bg": [("whoosh", -0.08, 0.18)], "popout": [("whoosh", -0.1, 0.2), ("pop", 0.15, 0.14)],
-            "lens": [("pop", 0.0, 0.16)], "outline": [("sparkle", 0.0, 0.14)]}
+TYPE_MAP = {"frost": [("whoosh", -0.12, 0.18)], "bg": [("whoosh", -0.08, 0.18)], "popout": [("whoosh", -0.1, 0.2), ("paper", 0.15, 0.14)],
+            "lens": [("pop", 0.0, 0.16)], "outline": [("pen", 0.0, 0.16), ("sparkle", 0.2, 0.12)]}
 FX_MAP = {"vhs": [("glitch", 0.0, 0.2)], "film": [("camera", 0.0, 0.12)], "bw": [("whoosh", 0.0, 0.12)]}
 
 
@@ -84,6 +84,8 @@ for _fam, _n in (("data", 6), ("charge", 4), ("stutter", 4), ("flash", 3), ("fli
                  ("dwhoosh", 4), ("thump", 3)):
     FAMILY_FALLBACK[_fam] = [f"viral_{_fam}_{k}" for k in range(1, _n + 1)]
 FAMILY_FALLBACK["vclick"] = [f"viral_click_{k}" for k in range(1, 7)]
+FAMILY_FALLBACK.update({"page": ["swipe", "swoosh"], "paper": ["swoosh", "swipe"], "mouse": ["click", "viral_click_1"],
+                        "keyboard": ["typing"], "phone": ["notify"], "kaching": ["cash"], "pen": ["swipe"]})
 
 # sound_design style "viral": tech/data sound design of top short-form editors (charge-ups, data blips, clicks, flashes)
 VIRAL_MAP: dict[str, list[tuple[str, float, float]]] = {

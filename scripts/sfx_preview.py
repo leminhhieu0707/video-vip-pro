@@ -22,7 +22,8 @@ VI = {"data": "bíp dữ liệu", "charge": "sạc flash rít lên", "click": "c
       "whoosh": "lướt", "boom": "bùm", "hit": "đấm / va", "pop": "pop", "sparkle": "lấp lánh", "bling": "bling", "ding": "ding",
       "riser": "kéo lên", "glitch": "glitch", "camera": "chụp ảnh", "typing": "gõ phím", "cash": "tiền", "drumroll": "trống dồn",
       "swipe": "quẹt", "game": "game", "laugh": "cười", "applause": "vỗ tay", "cartoon": "hoạt hình", "crunch": "giòn rụm",
-      "pour": "rót nước"}
+      "pour": "rót nước", "page": "lật trang", "paper": "giấy", "mouse": "click chuột",
+      "keyboard": "bàn phím", "phone": "điện thoại", "kaching": "ka-ching tiền", "pen": "bút viết"}
 GROUP_COLOR = {"VIRAL": (49, 88, 255), "TREND": (232, 184, 74), "CƠ BẢN": (90, 98, 120)}
 
 
@@ -64,6 +65,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--out", default="sfx_preview.mp4")
     ap.add_argument("--groups", nargs="*", help="VIRAL TREND CB (default: all)")
+    ap.add_argument("--families", nargs="*", help="only these families, e.g. page mouse kaching")
     a = ap.parse_args()
     out = Path(a.out).resolve()
     work = out.with_suffix("")
@@ -73,6 +75,8 @@ def main():
         want = {"CB": "CƠ BẢN"}
         keep = {want.get(g.upper(), g.upper()) for g in a.groups}
         items = [x for x in items if x[0] in keep]
+    if a.families:
+        items = [x for x in items if x[1] in set(a.families)]
     lst, index = [], {}
     for n, (group, fam, name, f) in enumerate(items, 1):
         try:

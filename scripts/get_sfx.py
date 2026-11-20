@@ -6,7 +6,7 @@ Writes assets/sfx/pack/<family>_<n>_<slug>.mp3 + assets/sfx/pack/index.json.
 In plans you then write a FAMILY name and render.py rotates through its variants so the same sound never repeats
 back to back:  "boom", "whoosh", "pop", "sparkle", "ding", "hit", "riser", "glitch", "camera", "typing", "cash",
 "click", "drumroll", "swipe", "bling", "laugh", "applause", "cartoon", "game",
-"crunch", "sizzle", "pour" (food ASMR).  "boom:3" = a fixed variant.
+"crunch", "sizzle", "pour" (food ASMR), "page", "paper", "mouse", "keyboard", "phone", "kaching", "pen".  "boom:3" = a fixed variant.
 Mixkit licence: https://mixkit.co/license/#sfxFree
 """
 from __future__ import annotations
@@ -42,6 +42,14 @@ FAMILIES = {
     "laugh": (["laugh"], 4.0, ["laugh"], ["evil", "scary"]),
     "applause": (["applause"], 5.0, ["applause", "clap", "cheer"], []),
     "cartoon": (["cartoon"], 2.0, ["boing", "pop", "spring", "slide", "bonk"], []),
+    # everyday objects creators use a lot
+    "page": (["page", "book", "flip"], 2.5, ["page", "flip", "book", "turn"], ["engine"]),
+    "paper": (["paper"], 3.0, ["paper", "crumpl", "rip", "tear", "fold"], []),
+    "mouse": (["mouse", "click"], 1.2, ["mouse", "click", "scroll"], ["camera", "shutter", "game"]),
+    "keyboard": (["keyboard", "typing"], 4.0, ["keyboard", "typing", "key"], ["piano", "synth", "atm", "cash"]),
+    "phone": (["phone", "vibration", "ringtone"], 4.0, ["phone", "vibrat", "ring", "message", "notification"], ["old", "rotary", "lips", "helicopter", "transition"]),
+    "kaching": (["cash-register", "register", "coin"], 3.0, ["register", "cash", "ka-ching", "coin"], []),
+    "pen": (["pen", "pencil", "marker", "writing", "scribble"], 3.0, ["pen", "pencil", "marker", "writ", "scribbl", "draw"], []),
     # food ASMR (food / restaurant / cooking videos)
     "crunch": (["crunch", "bite", "chewing"], 3.0, ["crunch", "crisp", "bite", "chew", "munch"], ["dog", "monster"]),
     "sizzle": (["sizzle", "fry", "frying"], 6.0, ["sizzl", "fry", "frying", "grill", "pan"], []),

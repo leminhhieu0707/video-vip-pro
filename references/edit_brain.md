@@ -80,7 +80,7 @@ Text "behind" the speaker needs a plain background behind the head. Glowing logo
 
   Lip sync is unchanged. Denoise each file first.
 
-Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon, crunch, pour (food ASMR). Use `"boom:3"` for one fixed variant.
+Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon, crunch, pour (food ASMR), page (lật trang), paper, mouse, keyboard, phone, kaching, pen (bút viết). Use `"boom:3"` for one fixed variant.
 
 ## 5. Write the storyboard first
 In `build_vip.py`, before the code, write a table: one row per sentence, with columns **time | words | visual | effect | camera | sound**. Then implement exactly that table. A builder that is a list of `motion(...)` calls without a storyboard almost always ends up formulaic.
