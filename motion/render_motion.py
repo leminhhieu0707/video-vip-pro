@@ -34,7 +34,9 @@ COMPS = {"BlueText", "BlueBig", "Tiles", "Checklist", "ScreenCard", "NumberTitle
          "ChatBubbles", "CommentsDrop", "BarChart", "EditTimeline", "JiggleChips", "Eyedropper", "CompareHandle",
          "VhsHud", "NumberList", "VsCards", "Callouts", "CountUp", "IconSlam", "OrbitIcons", "ScanLines", "CardStack",
          "Polaroids", "PostWall", "Newspaper", "TearAway", "BlowAway", "InkSpread", "TitleCard", "Intertitle",
-         "ScriptPage", "CodeLayer", "OrbitRing", "Portal", "Shockwave", "Cracks", "PhoneFrame", "VideoCard"}
+         "ScriptPage", "CodeLayer", "OrbitRing", "Portal", "Shockwave", "Cracks", "PhoneFrame", "VideoCard",
+         # PRO pack (src/blue/Pro.tsx)
+         "OrbitCarousel", "VisionCarousel", "BarChartRace", "LineGraph", "ExplodedStack", "DeviceSplay", "ConstellationHub", "HeadlineWall", "DoodleStickers"}
 
 
 def _src_version() -> str:

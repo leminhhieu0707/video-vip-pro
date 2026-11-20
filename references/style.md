@@ -226,6 +226,22 @@ Props are `x`, `y` (0–1) plus the ones listed below; times are seconds from th
 | rack focus | `camera_shutter` |
 | shockwave | `tech_rise_hit` |
 
+## PRO pack (creator-trend effects, `src/blue/Pro.tsx`)
+
+| comp | props | use |
+|---|---|---|
+| `OrbitCarousel` | `items` (images or `"frame:t"`), `x`, `y` (head height), `rx`, `ry`, `size` 230, `speed`, `label` | 3D ring of photos around the head. The back half goes behind the speaker automatically. |
+| `VisionCarousel` | `items`, `y`, `w`, `h`, `step` 1.1 s, `label` | Cover-flow of big cards, fast-slow change. |
+| `BarChartRace` | `frames: [{label, bars: [{label, v}]}]`, `title`, `unit` | Bars grow and swap ranks. |
+| `LineGraph` | `series: [{points: []}]`, `labels`, `title` | Line draws on; each value pops in. |
+| `ExplodedStack` | `src` (screenshot), `layers` 3, `labels` | 3D layers split with callouts, then merge. |
+| `DeviceSplay` | `src`, `y`, `label` | Phone, tablet and laptop pop out showing a site or app. |
+| `ConstellationHub` | `center`, `items: [{t, at}]` | Mind map; each node lights up when it is said. |
+| `HeadlineWall` | `items` (headlines), `rows` | Sliding headline pills filling the background. Use with `"behind": true`. |
+| `DoodleStickers` | `x`, `y` (head), `word` | Hand-drawn crown, stars, hearts, arrow and word, with boiling lines. |
+
+Person outline layer (vipfx), drawn as a hand-drawn line around the speaker: `{"type": "outline", "color": "#FFFFFF", "width": 9, "gap": 16, "boil": 3}`. Pair it with `DoodleStickers`.
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.

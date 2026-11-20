@@ -6,6 +6,13 @@ Needs aroll.mp4 + aroll.json from scripts/aroll.py (one clip per kept sentence, 
 Every effect below is optional; keep ~1 VIP effect per 3–5 s, always on the word that names it.
 Colours are written in the reference blue — "theme" re-colours everything (see references/style.md §Theme).
 """
+# ---- CREATIVE PASS (references/edit_brain.md) — fill before coding --------------------------------------------
+# About:        ...one sentence, who watches, feeling at 3 s / middle / end
+# Edit style:   Calm Premium | Hype Trend | Creator Showcase | Doodle Vlog | News Wall | Cinematic Story | Data Explainer
+# Motifs (3):   ...
+# Rhythm map:   peaks at ..s, ..s, ..s; valleys at ..s
+# Surprise:     ...
+# Storyboard:   time | words | visual | effect | camera | sound   (one row per sentence)
 import json
 from pathlib import Path
 
@@ -97,6 +104,7 @@ if MUSIC:
 plan = {
     "output": OUTPUT,
     "theme": THEME,
+    "sound_design": "trend",   # every effect gets a layered sound from the trend pack (scripts/sound.py)
     "canvas": {"aspect": "9:16", "fps": 30},
     "font": "Be Vietnam Pro Bold",
     "clips": clips,

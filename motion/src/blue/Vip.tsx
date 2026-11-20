@@ -7,28 +7,28 @@ import {Rich} from './Rich';
 import {C, EASE_IN, EASE_OUT, enter, exit, GRAD, gradText, SANS, SERIF, SHADOW_CARD, SHADOW_TEXT, T} from './theme';
 
 const MONO = 'Consolas, "Cascadia Mono", "Courier New", monospace';
-const CL = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
-const isFile = (s?: string) => !!s && /\.(png|jpe?g|webp|svg|gif)$/i.test(s);
-const src = (s: string) => (s.startsWith('http') ? s : staticFile(s));
+export const CL = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
+export const isFile = (s?: string) => !!s && /\.(png|jpe?g|webp|svg|gif)$/i.test(s);
+export const src = (s: string) => (s.startsWith('http') ? s : staticFile(s));
 
-function useT() {
+export function useT() {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
   return {frame, fps, W, H, t: frame / fps};
 }
-const lerp = (t: number, a: number, b: number, from = 0, to = 1, ease = EASE_IN) =>
+export const lerp = (t: number, a: number, b: number, from = 0, to = 1, ease = EASE_IN) =>
   interpolate(t, [a, b], [from, to], {...CL, easing: ease});
-const pop = (frame: number, fps: number, at: number, damping = 12) =>
+export const pop = (frame: number, fps: number, at: number, damping = 12) =>
   spring({frame: frame - at * fps, fps, config: {damping, stiffness: 190, mass: 0.6}});
 
-type P = {duration: number; [k: string]: any};
+export type P = {duration: number; [k: string]: any};
 
-const Glass: React.FC<{style?: React.CSSProperties; children?: React.ReactNode; dark?: boolean}> = ({style, children, dark}) => (
+export const Glass: React.FC<{style?: React.CSSProperties; children?: React.ReactNode; dark?: boolean}> = ({style, children, dark}) => (
   <div style={{background: dark ? T('linear-gradient(160deg, rgba(20,34,90,0.92), rgba(11,22,64,0.92))') : T('linear-gradient(160deg,#FFFFFF,#EEF2FF)'),
     border: dark ? T('1.5px solid rgba(140,170,255,0.35)') : T('2px solid rgba(255,255,255,0.95)'), boxShadow: SHADOW_CARD,
     borderRadius: 28, color: dark ? T('#fff') : C.ink, fontFamily: SANS, ...style}}>{children}</div>
 );
-const At: React.FC<{x: number; y: number; children: React.ReactNode; style?: React.CSSProperties; anchor?: string}> =
+export const At: React.FC<{x: number; y: number; children: React.ReactNode; style?: React.CSSProperties; anchor?: string}> =
   ({x, y, children, style, anchor = '-50%, -50%'}) => {
     const {W, H} = useT();
     return <div style={{position: 'absolute', left: x * W, top: y * H, transform: `translate(${anchor})`, ...style}}>{children}</div>;
@@ -36,7 +36,7 @@ const At: React.FC<{x: number; y: number; children: React.ReactNode; style?: Rea
 const Icon: React.FC<{v: string; size: number}> = ({v, size}) => isFile(v)
   ? <Img src={src(v)} style={{width: size, height: size, objectFit: 'contain'}} />
   : <span style={{fontSize: size * 0.86, lineHeight: 1}}>{v}</span>;
-const Photo: React.FC<{s?: string; style?: React.CSSProperties}> = ({s, style}) => s
+export const Photo: React.FC<{s?: string; style?: React.CSSProperties}> = ({s, style}) => s
   ? <Img src={src(s)} style={{width: '100%', height: '100%', objectFit: 'cover', ...style}} />
   : <div style={{width: '100%', height: '100%', background: T('linear-gradient(160deg,#c9d6ff,#8ea6ff)'), ...style}} />;
 

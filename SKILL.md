@@ -7,12 +7,12 @@ description: One-call premium video editor for talking-head and sales videos in 
 
 A raw video goes in. You return a finished, premium edit in **one go**. After that the user steers with short prompts ("câu 3 đổi hiệu ứng", "màu cam", "bỏ VHS", "chữ to hơn"), so every edit is rebuilt from a small builder script.
 
-Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill>/scripts/<name>.py`. First-time setup is `setup.ps1` (Windows) or `setup.sh`. If a command fails with a missing module or font, run setup.
+Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill>/scripts/<name>.py`. First-time setup is `setup.ps1` (Windows) or `setup.sh`; it also runs `scripts/get_sfx.py`, which downloads the trend SFX pack (about 130 Mixkit sounds in 19 families) to this computer. If a command fails with a missing module or font, run setup.
 
 ## Files to read
 | when | read |
 |---|---|
-| always, before planning | `references/style.md` (look, camera moves, every effect + props, theme) |
+| always, before planning | `references/edit_brain.md` (creative pass, 7 edit styles, variety rules, trend sound design) + `references/style.md` (every effect + props, camera, theme) |
 | picking effects / colour for the business | the matching row of `references/industries.md` |
 | a plan field you are unsure of | grep `references/plan.md` (full schema) |
 | non-talking-head genres (montage, slideshow, tutorial, podcast) | the matching section of `references/recipes.md` |
@@ -42,12 +42,12 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - in = first word −0.08 s, out = last word +0.15 s.
 
    Then run `aroll.py edited/cuts.json -o edited/aroll.mp4 --speed 1.1`. It produces a single lip-sync-safe A-roll plus `aroll.json`, which holds the sentence start times.
-5. **Build.** Copy `templates/build_vip.py` to `edited/` and fill it in:
+5. **Build.** Do the creative pass in `references/edit_brain.md` first. Pick an edit style, 3 motifs and a rhythm map, then write the storyboard table. Never reuse the previous video's sequence. Copy `templates/build_vip.py` to `edited/` and fill it in:
    - set `THEME`, `FACE`, `CAP_Y`;
    - give each sentence a `cap(i, top, text)`;
    - give each sentence a camera move (`cam`), with HOOK on sentence 0, a SNAP or EMPH on the 2–3 biggest keywords, and alternating PUSH / PUNCH / PULL on the rest;
    - add one VIP effect every 3–5 s, chosen from the industry row and placed **on the word that names it** (a price triggers `CountUp`, "3 điều" triggers `NumberList`, "đau đầu" triggers `Cracks`);
-   - pair each effect with its sound;
+   - keep `"sound_design": "trend"` on: every effect gets a layered sound from the trend pack automatically, so add sounds by hand only where they carry the story (riser into a reveal, silence before a punchline);
    - add 2–4 frost scenes per minute;
    - end with a CTA.
 6. **Render.** Run `build_vip.py`, then `render.py plan_vip.json --draft`. Renders over 2 min run in the background. The first render of each motion item takes 3–5 s; person matting takes about 1 s per second of effect.

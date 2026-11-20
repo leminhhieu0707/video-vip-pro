@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import theme  # noqa: E402
 from common import FFMPEG, parse_time  # noqa: E402
 
-TYPES = {"bg", "popout", "lens", "fx"}
+TYPES = {"bg", "popout", "lens", "fx", "outline"}
 MATTE_VERSION = 4
 MATTE_MODEL = "u2net"  # tested 20/11: cleaner than u2net_human_seg (which grabbed a wall logo) and more solid than isnet
 
@@ -116,7 +116,7 @@ class Ctx:
         (e.g. portrait blur + text behind the head on the same sentence) share one matte pass."""
         rs = []
         for o in overlays or []:
-            if o.get("type") in ("bg", "popout") or (o.get("type") == "motion" and (o.get("behind") or o.get("fill"))):
+            if o.get("type") in ("bg", "popout", "outline") or (o.get("type") == "motion" and (o.get("behind") or o.get("fill"))):
                 try:
                     rs.append(times(o, self.starts, self.total))
                 except Exception:
@@ -174,6 +174,27 @@ def person_layer(cx: Ctx, clean: str, s: float, e: float, k: int) -> str:
     return f"[pp{k}]"
 
 
+def outline(o: dict, k: int, vlast: str, cx: Ctx, s: float, e: float, fd: float) -> str:
+    """Hand-drawn line around the speaker (doodle outline): a band just outside the person matte, coloured, with a
+    'boiling' jitter every 3 frames.  {"type": "outline", "color": "#FFFFFF", "width": 9, "gap": 16, "boil": 3}"""
+    W, H, fc = cx.W, cx.H, cx.fc
+    gap, wid = float(o.get("gap", 16)), float(o.get("width", 9))
+    col = theme.tint(str(o.get("color", "#FFFFFF")).replace("#", "0x"))
+    b = float(o.get("boil", 3))
+    m = cx.matte_in(s, e, k)
+    q = 4  # work at 1/4 size: dilation by blur + threshold
+    fc.append(f"{m}scale={W // q}:{H // q},format=gray,split=2[oa{k}][ob{k}]")
+    fc.append(f"[oa{k}]gblur=sigma={gap / q:.2f},lut=y='if(gt(val,24),255,0)'[oi{k}]")
+    fc.append(f"[ob{k}]gblur=sigma={(gap + wid) / q:.2f},lut=y='if(gt(val,10),255,0)'[oo{k}]")
+    fc.append(f"[oo{k}][oi{k}]blend=all_mode=difference,scale={W}:{H}:flags=bicubic,gblur=sigma=1.2,format=gray[ol{k}]")
+    fc.append(f"color=c={col}:s={W}x{H}:r={cx.fps},trim=duration={e - s + 0.2:.3f},setpts=PTS-STARTPTS+{s:.3f}/TB,"
+              f"format=rgba[oc{k}]")
+    fc.append(f"[oc{k}][ol{k}]alphamerge,{_fades(s, e, cx.total, fd)}[ox{k}]")
+    fc.append(f"{vlast}[ox{k}]overlay=x='{b}*sin(floor(n/3)*2.1)':y='{b}*cos(floor(n/3)*1.7)':"
+              f"enable='between(t,{s:.3f},{e:.3f})'[vo{k}]")
+    return f"[vo{k}]"
+
+
 def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     s, e = times(o, cx.starts, cx.total)
     if e - s < 0.05:
@@ -181,6 +202,8 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     W, H, fc = cx.W, cx.H, cx.fc
     t = o["type"]
     fd = float(o.get("fade", 0.25))
+    if t == "outline":
+        return outline(o, k, vlast, cx, s, e, fd)
     fc.append(f"{vlast}split=2[vk{k}][cl{k}]")
     vlast, clean = f"[vk{k}]", f"[cl{k}]"
 

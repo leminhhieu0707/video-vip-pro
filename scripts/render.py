@@ -434,12 +434,31 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
     """[(file, time_on_timeline, volume, max_len)] from plan['sfx'] and plan['auto_sfx'].
     Long library sounds (applause, ticking, laughs) are cut to max_len with a fade-out."""
     root = Path(plan.get("_root", "."))
+    import sound
+    fb = lambda n: resolve_sfx(n, root)  # noqa: E731
     ev = []
     for s in plan.get("sfx", []) or []:
-        f = resolve_sfx(s["sfx"], root)
-        if f:
-            at = parse_time(s.get("at", 0)) + (starts[int(s["clip"])] if "clip" in s else 0)
-            ev.append((f, at, float(s.get("volume", 0.3)), float(s.get("len", 3.0))))
+        at0 = parse_time(s.get("at", 0)) + (starts[int(s["clip"])] if "clip" in s else 0)
+        for name, off, _ in sound.layers(s["sfx"]):
+            f = sound.pick(name, fb)
+            if f:
+                ev.append((f, at0 + off, float(s.get("volume", 0.3)), float(s.get("len", 3.0))))
+    # overlays that name their own sound ("sfx": "boom" or ["whoosh", "boom"])
+    if plan.get("sound_design"):
+        for o in plan.get("overlays", []) or []:
+            if o.get("sfx"):
+                at0 = parse_time(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0)
+                for name, off, _ in sound.layers(o["sfx"]):
+                    f = sound.pick(name, fb)
+                    if f:
+                        ev.append((f, at0 + off, float(o.get("sfx_volume", 0.2)), 3.0))
+        taken = [e[1] for e in ev]
+        for fam, at, vol in sound.design(plan, starts):
+            if any(abs(at - t) < 0.12 for t in taken):  # the builder already put a sound here
+                continue
+            f = sound.pick(fam, fb)
+            if f:
+                ev.append((f, at, vol, 2.5))
     auto = plan.get("auto_sfx")
     if auto:
         cfg = {**AUTO_SFX_DEFAULTS, **(auto if isinstance(auto, dict) else {})}
@@ -455,7 +474,7 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
                 f = resolve_sfx(name, root)
                 if f:
                     ev.append((f, starts[i] - 0.25, vol, 2.0))
-        for o in plan.get("overlays", []):
+        for o in ([] if plan.get("sound_design") else plan.get("overlays", [])):
             name = _pick(o.get("sfx", cfg.get(o.get("type", "text"))), counters, o.get("type", "text"))
             if not name:
                 continue
@@ -520,7 +539,7 @@ def frost_layer(o: dict, k: int, vlast: str, fc: list[str], starts: list[float],
     return out
 
 
-RING_COMPS = {"OrbitRing", "Portal"}
+RING_COMPS = {"OrbitRing", "Portal", "OrbitCarousel"}
 
 
 def resolve_stills(v, work: Path, width: int = 1080):
