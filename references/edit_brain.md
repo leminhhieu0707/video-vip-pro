@@ -62,6 +62,19 @@ On top of that, add the sounds that carry the story by hand:
 
 Use it for tech, AI, tutorials, creator content and fast promos. For food, lifestyle and hospitality, keep `"trend"`.
 
+**Lesson (Hiếu, 20/11): sound must follow the picture, not a grid.**
+- A click on every caption and a whoosh on every picture change sounds cheap ("lỏ"), whatever the sound.
+- Give each visible effect its own meaningful sound:
+  - pen for a drawn line;
+  - paper or page for a tear or a news wall;
+  - hit for a stamp;
+  - glitch for cracks or VHS;
+  - kaching for money;
+  - whoosh + boom only for the big reveals.
+- Put a whoosh on section changes only.
+- Prefer recorded pack sounds (get_sfx.py). The synthesized viral set is a fallback for apps, not the first choice.
+- Keep `"captions"` / `"cuts"` off unless the edit is very fast-paced.
+
 Denser creator mix: `"sound_design": {"style": "trend", "cuts": true, "captions": true}` adds a soft whoosh on every cut (`cut_volume` 0.09) and a light pop on captions that have a **keyword**.
 Food / restaurant videos: put ASMR on the exact words, e.g. `crunch` on "giòn", `pour` on "nước chấm" or "canh", plus `["whoosh", "camera"]` on each dish card. Grade them with `"grade": "food"`.
 Never put motion blur on the very first frame of a video: use `"blur": false` on the hook zoom, otherwise it reads as a glitch.
