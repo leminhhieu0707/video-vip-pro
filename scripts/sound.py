@@ -79,6 +79,40 @@ FAMILY_FALLBACK = {"whoosh": ["whoosh", "whoosh2", "whoosh3", "swoosh"], "boom":
                    "ding": ["ding", "ding2"], "riser": ["riser"], "glitch": ["glitch"], "camera": ["shutter"], "typing": ["typing"],
                    "cash": ["cash"], "drumroll": ["drumroll"], "swipe": ["swipe", "swoosh"], "game": ["tada"],
                    "cartoon": ["boing", "bonk"], "laugh": [], "applause": [], "crunch": [], "pour": []}
+# "viral editor" tech set, synthesized by make_sfx_viral.py (always available, ships in apps too)
+for _fam, _n in (("data", 6), ("charge", 4), ("stutter", 4), ("flash", 3), ("flicker", 3), ("popup", 5), ("cutout", 4),
+                 ("dwhoosh", 4), ("thump", 3)):
+    FAMILY_FALLBACK[_fam] = [f"viral_{_fam}_{k}" for k in range(1, _n + 1)]
+FAMILY_FALLBACK["vclick"] = [f"viral_click_{k}" for k in range(1, 7)]
+
+# sound_design style "viral": tech/data sound design of top short-form editors (charge-ups, data blips, clicks, flashes)
+VIRAL_MAP: dict[str, list[tuple[str, float, float]]] = {
+    "BlueText": [], "BlueBig": [("dwhoosh", -0.1, 0.16), ("thump", 0.0, 0.18)], "GiantCaption": [("charge", -0.95, 0.14)],
+    "KineticTitle": [("data", 0.0, 0.12)], "GravityText": [("thump", 0.25, 0.18)], "Stamp": [("thump", 0.1, 0.2), ("vclick", 0.1, 0.2)],
+    "SplitFlap": [("stutter", 0.0, 0.14)], "Highlighter": [("data", 0.0, 0.1)], "CircleDraw": [("data", 0.0, 0.1)],
+    "NumberTitle": [("popup", 0.0, 0.16)], "TitleCard": [("dwhoosh", -0.1, 0.18), ("thump", 0.05, 0.18)], "Intertitle": [("popup", 0.0, 0.14)],
+    "Tiles": [("popup", 0.0, 0.16)], "Checklist": [("popup", 0.0, 0.15)], "NumberList": [("data", 0.0, 0.12)],
+    "CountUp": [("data", 0.0, 0.14), ("vclick", 0.95, 0.2)], "BarChart": [("data", 0.0, 0.12)], "BarChartRace": [("data", 0.0, 0.12)],
+    "LineGraph": [("data", 0.0, 0.12)], "VsCards": [("dwhoosh", -0.05, 0.16), ("thump", 0.35, 0.16)], "Callouts": [("popup", 0.1, 0.14)],
+    "ConstellationHub": [("thump", 0.0, 0.16), ("data", 0.3, 0.1)], "IconSlam": [("thump", 0.0, 0.18)],
+    "IncomingCall": [("popup", 0.0, 0.18)], "NotifyStack": [("popup", 0.0, 0.16)], "ChatBubbles": [("popup", 0.0, 0.15)],
+    "CommentsDrop": [("popup", 0.0, 0.15)], "TypeBar": [("data", 0.0, 0.12)], "Cursor": [("vclick", 0.6, 0.2)],
+    "FloatButton": [("vclick", 0.5, 0.2)], "FileDrop": [("dwhoosh", 0.0, 0.14), ("popup", 0.6, 0.14)], "FocusBrackets": [("flash", 0.0, 0.16)],
+    "ChapterPanel": [("data", 0.0, 0.12)], "EditTimeline": [("vclick", 0.1, 0.14)], "JiggleChips": [("popup", 0.0, 0.15)],
+    "DeviceSplay": [("dwhoosh", 0.0, 0.16), ("popup", 0.35, 0.14), ("popup", 0.7, 0.14)], "ExplodedStack": [("charge", -0.5, 0.12)],
+    "PhoneFrame": [("dwhoosh", -0.05, 0.15)], "VideoCard": [("popup", 0.0, 0.15)], "ScreenCard": [("dwhoosh", -0.05, 0.15)],
+    "Polaroids": [("flash", 0.0, 0.18)], "PostWall": [("stutter", 0.0, 0.14)], "CardStack": [("cutout", 0.0, 0.16)],
+    "OrbitCarousel": [("dwhoosh", 0.0, 0.16), ("data", 0.3, 0.1)], "VisionCarousel": [("dwhoosh", 0.0, 0.16)],
+    "Newspaper": [("flash", 0.0, 0.16)], "HeadlineWall": [("stutter", 0.0, 0.14)], "TearAway": [("cutout", 0.08, 0.22)],
+    "BlowAway": [("dwhoosh", 0.0, 0.18)], "InkSpread": [("dwhoosh", 0.0, 0.18), ("thump", 0.25, 0.16)],
+    "Shockwave": [("thump", 0.0, 0.22), ("dwhoosh", 0.05, 0.12)], "Cracks": [("thump", 0.0, 0.2), ("flicker", 0.05, 0.1)],
+    "OrbitRing": [("data", 0.0, 0.1)], "Portal": [("charge", -0.6, 0.12), ("thump", 0.4, 0.16)], "ScanLines": [("flicker", 0.0, 0.1)],
+    "VhsHud": [("flicker", 0.0, 0.16)], "DoodleStickers": [("popup", 0.0, 0.16), ("popup", 0.3, 0.12)], "ScriptPage": [("data", 0.1, 0.1)],
+    "Eyedropper": [("vclick", 0.8, 0.18)], "CompareHandle": [("data", 0.2, 0.12)], "FollowCard": [("vclick", 0.9, 0.2), ("popup", 1.1, 0.14)],
+}
+VIRAL_TYPE = {"frost": [("dwhoosh", -0.12, 0.16)], "bg": [("cutout", 0.0, 0.18)], "popout": [("cutout", 0.0, 0.2), ("flash", 0.05, 0.12)],
+              "lens": [("popup", 0.0, 0.15)], "outline": [("cutout", 0.0, 0.18)]}
+VIRAL_FX = {"vhs": [("flicker", 0.0, 0.2)], "film": [("flash", 0.0, 0.12)], "bw": [("flash", 0.0, 0.12)]}
 
 
 def pick(name: str, fallback) -> Path | None:
@@ -125,24 +159,26 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
     creator mix: a soft whoosh on every cut and a light pop on captions that have a **keyword**."""
     sd = plan.get("sound_design")
     opts = sd if isinstance(sd, dict) else {}
+    viral = (opts.get("style") if opts else sd) == "viral"
+    smap, tmap, fmap = (VIRAL_MAP, VIRAL_TYPE, VIRAL_FX) if viral else (SOUND_MAP, TYPE_MAP, FX_MAP)
     out = []
     if opts.get("cuts"):
         clips = plan.get("clips", []) or []
         for i in range(1, len(clips)):
             if clips[i - 1]["out"] - clips[i - 1]["in"] >= 0.8:
-                out.append(("whoosh", starts[i] - 0.12, float(opts.get("cut_volume", 0.09))))
+                out.append(("dwhoosh" if viral else "whoosh", starts[i] - 0.12, float(opts.get("cut_volume", 0.09))))
     if opts.get("captions"):
         for o in plan.get("overlays", []) or []:
             if o.get("comp") == "BlueText" and "**" in str((o.get("props") or {}).get("text", "")) and "sfx" not in o:
-                out.append(("pop", float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0) + 0.05, 0.1))
+                out.append(("vclick" if viral else "pop", float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0) + 0.05, 0.1))
     for o in plan.get("overlays", []) or []:
         if "sfx" in o:  # explicit: null = silent, name/list = handled as a plan sound
             continue
         ty = o.get("type", "text")
-        lay = (SOUND_MAP.get(o.get("comp"), []) if ty == "motion" else TYPE_MAP.get(ty)
-               or (FX_MAP.get(o.get("effect")) if ty == "fx" else None) or [])
+        lay = (smap.get(o.get("comp"), []) if ty == "motion" else tmap.get(ty)
+               or (fmap.get(o.get("effect")) if ty == "fx" else None) or [])
         if ty == "frost" and o.get("mode") == "none":
-            lay = [("camera", 0.0, 0.16)]
+            lay = [("flash" if viral else "camera", 0.0, 0.16)]
         if ty == "motion" and o.get("half") == "back":
             continue
         t0 = float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0)
@@ -153,15 +189,15 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
         if ty == "motion" and o.get("comp") in ("Tiles", "Checklist", "NotifyStack", "ChatBubbles", "CommentsDrop", "Callouts", "IconSlam"):
             for it in (props.get("items") or [])[1:6]:
                 if isinstance(it, dict) and it.get("at") is not None:
-                    out.append(("pop" if o["comp"] != "IconSlam" else "hit", t0 + float(it["at"]), 0.15))
+                    out.append(("popup" if viral else ("pop" if o["comp"] != "IconSlam" else "hit"), t0 + float(it["at"]), 0.15))
     for i, c in enumerate(plan.get("clips", []) or []):
         for z in c.get("zooms") or []:
             to = float(z.get("to", 1.2))
             at = starts[i] + float(z.get("at", 0))
-            if to >= 1.7:  # snap zoom: whoosh in + bass hit
-                out += [("whoosh", at - 0.06, 0.18), ("boom", at, 0.16)]
+            if to >= 1.7:  # snap zoom (viral: the charge-up lands on the snap, plus a flash)
+                out += ([("charge", at - 0.95, 0.12), ("flash", at, 0.14)] if viral else [("whoosh", at - 0.06, 0.18), ("boom", at, 0.16)])
             elif to >= 1.2 and c.get("shake"):
-                out.append(("hit", at, 0.16))
+                out.append(("thump" if viral else "hit", at, 0.16))
     # de-clutter: same family within 0.3 s, and never more than 3 sounds inside any 0.5 s window
     out.sort(key=lambda e: e[1])
     kept: list[tuple[str, float, float]] = []

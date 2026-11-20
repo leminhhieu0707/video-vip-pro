@@ -27,6 +27,7 @@ Get-ChildItem "$here\assets\fonts\*.ttf" | ForEach-Object {
 
 Write-Host "4/4 Âm thanh hiệu ứng + kiểm tra..." -ForegroundColor Cyan
 python -X utf8 "$here\scripts\make_sfx.py" | Out-Null
+python -X utf8 "$here\scripts\make_sfx_viral.py" | Out-Null
 Write-Host "   tải kho âm thanh hot trend (Mixkit, miễn phí dùng thương mại)..."
 python -X utf8 "$here\scripts\get_sfx.py"
 $hasAss = ffmpeg -hide_banner -filters 2>$null | Select-String " ass "

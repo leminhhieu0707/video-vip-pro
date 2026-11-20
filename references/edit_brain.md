@@ -49,6 +49,18 @@ On top of that, add the sounds that carry the story by hand:
 - **Comedy only when it is funny:** `laugh` and `cartoon` only on a real joke, at most twice per video.
 - **Volumes:** UI 0.14–0.2, impacts 0.18–0.24, risers 0.1–0.14. Speech always stays on top.
 
+**Viral style** (the tech sound design of top short-form editors, e.g. "Viral Editor SFX Pack"-type channels): `"sound_design": {"style": "viral", "cuts": true, "captions": true}`. This style swaps every effect to a synthesized tech set from `make_sfx_viral.py`, which is always installed and safe to ship in apps:
+- **charge-up:** a camera-flash whine that lands on snap zooms and giant text;
+- **data:** blips for UI, lists and numbers;
+- **clicks:** on keyword captions and buttons;
+- **stutter:** on headline walls and flip boards;
+- **flash:** on stills and focus;
+- **cutout:** snap on person layers;
+- **digital whoosh:** on cuts;
+- **sub thump:** under hits.
+
+Use it for tech, AI, tutorials, creator content and fast promos. For food, lifestyle and hospitality, keep `"trend"`.
+
 Denser creator mix: `"sound_design": {"style": "trend", "cuts": true, "captions": true}` adds a soft whoosh on every cut (`cut_volume` 0.09) and a light pop on captions that have a **keyword**.
 Food / restaurant videos: put ASMR on the exact words, e.g. `crunch` on "giòn", `pour` on "nước chấm" or "canh", plus `["whoosh", "camera"]` on each dish card. Grade them with `"grade": "food"`.
 Never put motion blur on the very first frame of a video: use `"blur": false` on the hook zoom, otherwise it reads as a glitch.
