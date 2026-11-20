@@ -14,7 +14,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-PACK = Path(__file__).resolve().parent.parent / "assets" / "sfx" / "pack"
+import os
+
+PACK = Path(os.environ["MH_SFX_PACK"]) if os.environ.get("MH_SFX_PACK") else     Path(__file__).resolve().parent.parent / "assets" / "sfx" / "pack"
 _index: dict | None = None
 _turn: dict[str, int] = {}
 
@@ -71,6 +73,14 @@ ALIAS = {"whoosh_air": "whoosh", "whoosh_fast": "whoosh", "whoosh_cinematic": "w
          "camera_shutter": "camera", "shutter": "camera", "typing_real": "typing", "riser_short": "riser", "tada": "game"}
 
 
+# without the downloaded pack: each family rotates through the synthesized library (make_sfx.py names)
+FAMILY_FALLBACK = {"whoosh": ["whoosh", "whoosh2", "whoosh3", "swoosh"], "boom": ["impact", "vine_boom"], "hit": ["impact"],
+                   "pop": ["pop", "pop2", "pop3", "bubble"], "click": ["click"], "sparkle": ["sparkle"], "bling": ["sparkle", "ding2"],
+                   "ding": ["ding", "ding2"], "riser": ["riser"], "glitch": ["glitch"], "camera": ["shutter"], "typing": ["typing"],
+                   "cash": ["cash"], "drumroll": ["drumroll"], "swipe": ["swipe", "swoosh"], "game": ["tada"],
+                   "cartoon": ["boing", "bonk"], "laugh": [], "applause": [], "crunch": [], "pour": []}
+
+
 def pick(name: str, fallback) -> Path | None:
     """Family name -> next variant file (rotates); 'family:n' -> that variant; anything else -> fallback(name)."""
     fam, _, n = str(name).partition(":")
@@ -87,6 +97,15 @@ def pick(name: str, fallback) -> Path | None:
         p = PACK / f["file"]
         if p.exists():
             return p
+    if fam in FAMILY_FALLBACK:  # no pack installed: rotate through the basic library
+        opts = FAMILY_FALLBACK[fam]
+        for k in range(len(opts)):
+            i = _turn.get("fb_" + fam, 0)
+            _turn["fb_" + fam] = i + 1
+            got = fallback(opts[(i + k) % len(opts)])
+            if got:
+                return got
+        return None
     return fallback(fam if files else name)
 
 
