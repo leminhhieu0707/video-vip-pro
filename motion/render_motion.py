@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -121,10 +122,12 @@ def render(comp: str, props: dict, duration: float, width: int = 1080, height: i
     key = path.stem.split("_")[-1]
     cache = path.parent
     entry = str(bundle or ensure_bundle())
-    pfile = cache / f"props_{key}.json"
+    uid = f"{key}_{os.getpid()}_{threading.get_ident()}"  # identical items may render in parallel threads
+    pfile = cache / f"props_{uid}.json"
+    final, target = target, (target.with_name(f"{target.stem}.{uid}{target.suffix}") if not out else target)
     pfile.write_text(json.dumps(full, ensure_ascii=False), encoding="utf-8")
     if RT:
-        job = cache / f"job_{key}.json"
+        job = cache / f"job_{uid}.json"
         job.write_text(json.dumps({"bundle": entry, "comp": comp, "props": str(pfile.resolve()), "out": str(target.resolve()),
                                    "frame": int(still * fps) if still is not None else None}), encoding="utf-8")
         r = subprocess.run([NODE, str(RT / "render.mjs"), str(job)], cwd=str(RT), capture_output=True, text=True,
@@ -133,7 +136,9 @@ def render(comp: str, props: dict, duration: float, width: int = 1080, height: i
         if r.returncode != 0 or not target.exists():
             raise RuntimeError(f"Remotion failed for {comp}:\n{(r.stderr or r.stdout)[-2500:]}")
         pfile.unlink(missing_ok=True)
-        return target
+        if target != final:
+            os.replace(target, final)
+        return final
     if still is not None:
         cmd = [_npx(), "remotion", "still", entry, comp, str(target.resolve()), f"--props={pfile.resolve()}",
                f"--frame={int(still * fps)}", "--image-format=png", "--log=error"]
@@ -145,7 +150,9 @@ def render(comp: str, props: dict, duration: float, width: int = 1080, height: i
     if r.returncode != 0 or not target.exists():
         raise RuntimeError(f"Remotion failed for {comp}:\n{(r.stderr or r.stdout)[-2500:]}")
     pfile.unlink(missing_ok=True)
-    return target
+    if target != final:
+        os.replace(target, final)
+    return final
 
 
 def main():
