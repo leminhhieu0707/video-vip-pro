@@ -1,0 +1,10 @@
+numpy
+scipy
+Pillow
+fonttools
+opencv-python
+faster-whisper
+rembg
+edge-tts
+# GPU (NVIDIA) for Whisper: nvidia-cublas-cu12 "nvidia-cudnn-cu12>=9,<10"
+# person matting: onnxruntime-directml (Windows, any GPU) or onnxruntime (CPU) — setup picks one

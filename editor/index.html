@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIP Editor</title>
+<link rel="stylesheet" href="/static/style.css?v=2">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><span class="logo">VIP</span> Editor <span class="ver">1.0</span></div>
+  <div class="plan-name" id="planName">…</div>
+  <div class="status" id="status">Đang tải…</div>
+  <div class="spacer"></div>
+  <button id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
+  <button id="btnRedo" title="Làm lại (Ctrl+Y)">↷</button>
+  <button id="btnTheme" class="chip">🎨 Màu chủ đạo</button>
+  <button id="btnHistory" class="chip">🕘 Lịch sử</button>
+  <button id="btnBase" class="chip warn hidden" title="Cảnh đã đổi: dựng lại video nền để xem đúng">⟳ Dựng lại nền</button>
+  <button id="btnSave" class="chip">💾 Lưu</button>
+  <button id="btnDraft" class="chip">Xuất nháp</button>
+  <button id="btnFinal" class="primary">⬇ Xuất video</button>
+</header>
+
+<main id="main">
+  <aside id="left">
+    <div class="tabs" id="listTabs">
+      <button data-f="all" class="on">Tất cả</button>
+      <button data-f="text">Chữ</button>
+      <button data-f="media">Ảnh/Video</button>
+      <button data-f="sub">Phụ đề</button>
+      <button data-f="audio">Âm thanh</button>
+      <button data-f="clip">Cảnh</button>
+    </div>
+    <input id="search" placeholder="Tìm chữ, tên file…">
+    <div id="list"></div>
+    <div class="add-row">
+      <button data-add="text">+ Chữ</button>
+      <button data-add="title">+ Tiêu đề</button>
+      <button data-add="label">+ Nhãn giá</button>
+      <button data-add="badge">+ Badge</button>
+      <button data-add="image">+ Ảnh</button>
+      <button data-add="sfx">+ Tiếng</button>
+      <button data-add="blue" class="blue-btn">✦ Chữ Blue</button>
+      <button data-add="frost" class="blue-btn">❄ Mờ kính</button>
+      <button data-add="tiles" class="blue-btn">▦ Ô icon</button>
+    </div>
+    <input type="file" id="fileImg" accept="image/*,video/*" hidden>
+  </aside>
+
+  <section id="center">
+    <div id="stageWrap">
+      <div id="stage">
+        <video id="base" playsinline preload="auto"></video>
+        <div id="media"></div>
+        <div id="safe" class="hidden">
+          <div class="sz top"></div><div class="sz bottom"></div><div class="sz right"></div>
+        </div>
+        <div id="handles"></div>
+      </div>
+      <div id="stageMsg" class="hidden"></div>
+    </div>
+    <div id="transport">
+      <button id="btnPlay" title="Phát / dừng (Space)">▶</button>
+      <span id="tc">0:00.00 / 0:00.00</span>
+      <label class="tog"><input type="checkbox" id="chkSafe"> Vùng an toàn</label>
+      <label class="tog"><input type="checkbox" id="chkSound" checked> Âm thanh</label>
+      <label class="tog"><input type="checkbox" id="chkBox" checked> Khung chọn</label>
+      <span class="hint">Kéo chữ/ảnh trên khung hình để đổi vị trí · ←/→ từng khung · Shift = 1 giây</span>
+    </div>
+  </section>
+
+  <aside id="right">
+    <div id="props"></div>
+  </aside>
+</main>
+
+<footer id="tl">
+  <div id="tlHead">
+    <b>Timeline</b> <span id="tlInfo"></span>
+    <div class="spacer"></div>
+    <label class="zoom">Thu phóng <input type="range" id="zoom" min="0" max="100" value="0"></label>
+  </div>
+  <div id="tlBody">
+    <div id="tlLabels"></div>
+    <div id="tlScroll"><div id="tlInner"><div id="ruler"></div><div id="tracks"></div><div id="playhead"></div></div></div>
+  </div>
+</footer>
+
+<div id="modal" class="hidden"><div class="box"><div class="mhead"><b id="mTitle"></b><button id="mClose">✕</button></div><div id="mBody"></div></div></div>
+<div id="themePanel" class="hidden"></div>
+<div id="toast" class="hidden"></div>
+
+<script type="module" src="/static/app.js?v=2"></script>
+</body>
+</html>

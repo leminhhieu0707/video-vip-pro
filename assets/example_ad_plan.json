@@ -1,0 +1,22 @@
+{
+  "output": "edited/ads_final.mp4",
+  "canvas": {"aspect": "9:16", "fps": 30, "fit": "auto"},
+  "font": "Be Vietnam Pro Bold",
+  "clips": [
+    {"src": "raw/intro.mp4", "in": 0.4, "out": 8.6},
+    {"src": "raw/prices.mp4", "in": 1.2, "out": 18.4},
+    {"src": "raw/closeup.mp4", "in": 2.0, "out": 7.5, "transition": {"type": "fade", "duration": 0.3}},
+    {"src": "raw/storefront.jpg", "duration": 3.5, "zoom": "in", "transition": "slideup"}
+  ],
+  "subtitles": {"transcript": "raw/prices.transcript.json", "style": "tiktok", "keywords": {"miễn": "#FF4D8D"}},
+  "overlays": [
+    {"type": "title", "clip": 0, "start": 0.3, "end": 3.0, "text": "Giảm 1 triệu", "highlight": "Mỗi máy", "pos": "upper", "pulse": true},
+    {"type": "label", "clip": 1, "start": 0.2, "end": 3.4, "title": "12 Pro Max", "text": "8.190k", "pos": [0.3, 0.42]},
+    {"type": "label", "clip": 1, "start": 3.5, "end": 6.6, "title": "14 Pro Max", "text": "11.990k", "pos": [0.3, 0.42]},
+    {"type": "badge", "clip": 2, "start": 0.2, "end": 2.6, "text": "1 đổi 1 trong 30 ngày", "icon": "dot", "pos": [0.5, 0.45]},
+    {"type": "text", "clip": 3, "start": 0.3, "end": 3.5, "text": "419 Điện Biên Phủ - Đà Nẵng\n0986 906 098", "bg": "#000000C0", "pos": [0.5, 0.8], "anim": "slide-up"},
+    {"type": "image", "src": "assets/logo.png", "pos": [0.86, 0.07], "width": 0.15, "radius": 30}
+  ],
+  "audio": {"music": {"src": "music/upbeat.mp3", "volume": 0.16, "duck": true}, "normalize": -14},
+  "fade_out": 0.5
+}

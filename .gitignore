@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+motion/node_modules/
+motion/build/
+motion/out/
+motion/public/_in/
+*_work/
+.tmp/
+*.mp4
+*.mov
+*.f32
