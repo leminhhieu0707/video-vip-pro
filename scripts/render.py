@@ -286,6 +286,33 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
 
 # ------------------------------------------------------------------ step 2: join
 
+def keep_timing(clips: list[dict]) -> None:
+    """Transitions without losing time: xfade overlaps two clips by d, which normally shortens the timeline and
+    pushes voice-over / overlays out of sync. With "keep_timing": true every transition borrows d extra seconds of
+    handle from the outgoing clip (or, if its source ends, from the incoming clip), so each clip still starts at
+    the same timeline second and the total length is unchanged."""
+    for i in range(1, len(clips)):
+        t = clips[i].get("transition")
+        if isinstance(t, str):
+            t = {"type": t}
+        if not t or t.get("type", "cut") == "cut":
+            continue
+        d = float(t.get("duration", 0.4))
+        prev, cur = clips[i - 1], clips[i]
+        sp_prev, sp_cur = float(prev.get("speed", 1)), float(cur.get("speed", 1))
+        try:
+            src_len = float(probe(prev["src"])["duration"])
+        except Exception:
+            src_len = 1e9
+        out_p = parse_time(prev["out"]) if prev.get("out") is not None else src_len
+        if out_p + d * sp_prev <= src_len - 0.02:
+            prev["out"] = round(out_p + d * sp_prev, 3)
+        elif parse_time(cur.get("in", 0)) - d * sp_cur >= 0:
+            cur["in"] = round(parse_time(cur.get("in", 0)) - d * sp_cur, 3)
+        else:  # no handles anywhere: fall back to a hard cut rather than drifting
+            cur.pop("transition", None)
+
+
 def join_segments(clips: list[dict], work: Path, vcodec: list[str], fps: int = 30) -> tuple[Path, list[float], float]:
     trans = []
     for i, c in enumerate(clips):
@@ -814,6 +841,8 @@ def main():
 
     for c in plan["clips"]:
         c["src"] = absify(c["src"])
+    if plan.get("keep_timing"):
+        keep_timing(plan["clips"])
     for o in plan.get("overlays", []):
         if "src" in o:
             o["src"] = absify(o["src"])

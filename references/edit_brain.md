@@ -54,6 +54,19 @@ Food / restaurant videos: put ASMR on the exact words, e.g. `crunch` on "giòn",
 Never put motion blur on the very first frame of a video: use `"blur": false` on the hook zoom, otherwise it reads as a glitch.
 Text "behind" the speaker needs a plain background behind the head. Glowing logos and bright signs get matted as foreground and cut through the text, so skip `behind` on those shots.
 
+## 5. Smooth transitions and one voice
+- **Transitions without drift.** With `"keep_timing": true`, a clip's `"transition": {"type": "zoomin" | "fade" | "smoothleft" | "hblur" | "smoothup", "duration": 0.25–0.4}` borrows handle frames, so the voice-over and overlays stay in sync. Use them like this:
+  - `zoomin` at section changes;
+  - soft types rotating on normal cuts;
+  - hard cuts on shots shorter than 1 s (beat cuts keep the energy);
+  - `fade` 0.5 into the end card.
+- **One voice.** When the presenter's on-camera takes and a separate voice-over are both in the video, run `scripts/voice_match.py --ref vo.wav --out-dir voice vo.wav take1.wav take2.wav` and use the `*_matched.wav` files as `voiceover` items (`in`/`out` = the clip's in/out, `start` = the clip's timeline start, with the clip muted). This gives:
+  - the same tone, via auto EQ against the voice-over;
+  - the same loudness (−16 LUFS);
+  - the same compression and a shared light room.
+
+  Lip sync is unchanged. Denoise each file first.
+
 Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, ding, riser, glitch, camera, typing, cash, drumroll, swipe, game, laugh, applause, cartoon, crunch, pour (food ASMR). Use `"boom:3"` for one fixed variant.
 
 ## 5. Write the storyboard first

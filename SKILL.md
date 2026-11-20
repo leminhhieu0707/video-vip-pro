@@ -64,6 +64,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - give a 3–5 line summary: length, theme, the effects used and on which sentence, and anything you guessed;
    - start the VIP Editor in the background, `python -X utf8 <skill>/editor/server.py edited/plan_vip.json`, so the user can drag, retime, retype and recolour by hand for 0 token.
 
+**Mixed voices.** If the video mixes on-camera speech with a voice-over, run `scripts/voice_match.py` so both sound like one voice (see `references/edit_brain.md` §5). Scan every clip for good on-camera lines (transcribe them all in one pass) before deciding to use only the voice-over.
+
 ## Refining by prompt (after the first edit)
 - **Always edit `build_vip.py`, never the generated plan.** If the user said they changed things in the VIP Editor, re-read `plan_vip.json` first and edit the plan directly instead, since a rebuild would drop their hand edits. Tell them which approach you are taking.
 - **Map requests to edits:**
