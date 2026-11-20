@@ -268,7 +268,9 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
     clean_s = "".join(x + "," for x in clean)
     if vol and not is_img:
         af = (f"[0:a]aresample=48000,aformat=channel_layouts=stereo,{clean_s}"
-              f"{atempo_chain(speed) + ',' if speed != 1 else ''}volume={vol}[a0];"
+              f"{atempo_chain(speed) + ',' if speed != 1 else ''}volume={vol},"
+              # 12 ms ramps at both ends: hard jump cuts otherwise click/pop on the audio
+              f"afade=t=in:d=0.012,afade=t=out:st={max(0.0, dur - 0.012):.3f}:d=0.012[a0];"
               f"[a0][1:a]amix=inputs=2:duration=first:normalize=0,atrim=0:{dur:.3f}[a]")
     else:
         af = f"[1:a]atrim=0:{dur:.3f}[a]"
@@ -618,6 +620,9 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
         else:
             if o.get("loop"):
                 inputs += ["-stream_loop", "-1"]
+            if str(o["src"]).lower().endswith(".webm"):
+                # transparent stickers are VP9 with alpha: only libvpx decodes the alpha plane
+                inputs += ["-c:v", "libvpx-vp9"]
             inputs += ["-ss", f"{parse_time(o.get('in', 0)):.3f}", "-t", f"{e - s:.3f}", "-i", str(o["src"])]
         wfrac = float(o.get("width", 0.25 if o["type"] == "image" else 0.4))
         ow = int(wfrac * W if wfrac <= 1 else wfrac) // 2 * 2
