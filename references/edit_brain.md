@@ -35,6 +35,39 @@ The worst VIP edit is the same sequence on every video: hook zoom → frost → 
 - **Layout:** do not reuse the same screen zone for every graphic. Move graphics between the top band, the side opposite the face, and full-screen scenes.
 - **Ending.** The last 3 seconds must feel like an ending: a final motif hit plus the CTA. It should not be "the same overlay again".
 
+## 4a. Sound brain: right sound, right place (most important)
+A sound is there because the words or the picture ask for it. Three layers, in this order:
+
+1. **Effect sounds**, picture-led, from `sound.py`: each visible effect gets its own meaningful sound (pen for a drawn line, page for a news wall, hit for a stamp…).
+2. **Story sounds**, word-led, from `scripts/sound_brain.py`:
+
+   | spoken | sound |
+   |---|---|
+   | money or prices | `kaching` on the number |
+   | "giòn" | `crunch` |
+   | "chụp" | `camera` |
+   | "gõ / lệnh" | `keyboard` |
+   | "bấm" | `mouse` |
+   | "lật / kịch bản" | `page` |
+   | "điện thoại" | `phone` |
+   | "xong" | `ding` |
+   | "đẹp / xịn" | `sparkle` |
+   | "nhanh" | `whoosh` |
+   | surprise | `riser` 1.1 s before, then `boom` on the word |
+   | fail / chê | meme (comedy only) |
+   | "thứ nhất / tiếp theo / nhưng" | one whoosh (section change) |
+
+   Turn it on with `"sound_design": {"style": "trend", "brain": {"transcripts": ["voice.transcript.json"], "offset": 0.5, "comedy": false}}`, or run `python sound_brain.py voice.transcript.json --offset 0.5` to read the suggestions and their reasons first.
+3. **Your judgement on top.** Read the suggestion list and delete anything that does not add meaning. Add silence before a punchline. A meme only works on a real joke.
+
+**Limits:**
+- one meaning = one sound;
+- at least 0.45 s between sounds;
+- at most 4 sounds per 10 s;
+- loud stingers (boom, meme) at most every 6 s;
+- at most 3 memes per video;
+- never double a sound that an effect already has.
+
 ## 4. Sound design (trend creator style)
 Turn it on with `"sound_design": "trend"`. The automatic layer then:
 - adds sounds to every effect (`scripts/sound.py` SOUND_MAP);

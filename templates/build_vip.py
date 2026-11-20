@@ -104,7 +104,8 @@ if MUSIC:
 plan = {
     "output": OUTPUT,
     "theme": THEME,
-    "sound_design": {"style": "trend"},   # recorded trend sounds on every effect (scripts/sound.py); add story sounds by hand
+    "sound_design": {"style": "trend",    # effect sounds (sound.py) + story sounds from the words (sound_brain.py)
+                     "brain": {"transcripts": [AR.get("transcript", "")] if AR.get("transcript") else [], "offset": 0, "comedy": False}},
     "keep_timing": True,       # transitions borrow handle frames: total length + voice sync stay exact
     "canvas": {"aspect": "9:16", "fps": 30},
     "font": "Be Vietnam Pro Bold",

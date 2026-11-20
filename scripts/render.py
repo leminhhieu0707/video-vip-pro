@@ -490,6 +490,23 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
             f = sound.pick(fam, fb)
             if f:
                 ev.append((f, at, vol * gain, 2.5))
+        # sound brain: story sounds from the meaning of the words (money -> kaching, "giòn" -> crunch, surprise -> riser+boom...)
+        sd = plan.get("sound_design")
+        brain = sd.get("brain") if isinstance(sd, dict) else None
+        if brain:
+            import sound_brain
+            trs = brain.get("transcripts") or []
+            trs = [str((root / t).resolve()) if not Path(t).is_absolute() else t for t in (trs if isinstance(trs, list) else [trs])]
+            try:
+                words = sound_brain.words_from(trs, float(brain.get("offset", 0)))
+                style = sd.get("style", "trend")
+                for pk in sound_brain.suggest(words, style, bool(brain.get("comedy")), busy=[e[1] for e in ev],
+                                              max_memes=int(brain.get("max_memes", 3))):
+                    f = sound.pick(pk["sfx"], fb)
+                    if f:
+                        ev.append((f, pk["at"], pk["volume"] * gain, 2.5))
+            except Exception as e:  # never fail a render because of the sound brain
+                print(f"[render] sound brain skipped: {e}")
     auto = plan.get("auto_sfx")
     if auto:
         cfg = {**AUTO_SFX_DEFAULTS, **(auto if isinstance(auto, dict) else {})}

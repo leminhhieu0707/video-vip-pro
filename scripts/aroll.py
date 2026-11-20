@@ -8,6 +8,7 @@ sentence from one constant-frame-rate copy in a single ffmpeg graph keeps pictur
 
 cuts.json (write it from the transcript: one entry per sentence you keep, in the order you want them):
     {"sources": ["../IMG_0992.MOV", "../IMG_0993.MOV"],
+     "transcripts": ["../IMG_0992.transcript.json", "../IMG_0993.transcript.json"],   # optional -> aroll.transcript.json
      "cuts": [{"src": 0, "in": 0.42, "out": 3.10, "text": "thôi đừng có bỏ tiền đi học edit video nữa"}, ...]}
 Paths are relative to cuts.json. in/out: first word start −0.08 s, last word end +0.15 s (no breath at the cut).
 
@@ -157,6 +158,26 @@ def main():
 
     meta = {"src": out.name, "starts": starts, "total": total, "speed": SP,
             "cuts": [{**c, "start": st} for c, st in zip(spec["cuts"], starts)]}
+    # timeline transcript (word times on aroll.mp4) for captions + the sound brain, when source transcripts are given:
+    # cuts.json "transcripts": ["../IMG_0992.transcript.json", ...] (same order as "sources")
+    trs = spec.get("transcripts") or []
+    if trs:
+        src_words = []
+        for t in trs:
+            tr = json.loads((root / t).read_text(encoding="utf-8"))
+            src_words.append([w for sg in tr.get("segments", []) for w in (sg.get("words") or [])])
+        segs = []
+        for c, st in zip(spec["cuts"], starts):
+            n, a0, b0 = int(c.get("src", 0)), float(c["in"]), float(c["out"])
+            ws = [{"word": w["word"], "start": round(st + (float(w["start"]) - a0) / SP, 3),
+                   "end": round(st + (float(w["end"]) - a0) / SP, 3)}
+                  for w in (src_words[n] if n < len(src_words) else []) if a0 <= float(w["start"]) < b0]
+            if ws:
+                segs.append({"start": ws[0]["start"], "end": ws[-1]["end"], "text": c.get("text") or " ".join(w["word"] for w in ws),
+                             "words": ws})
+        tl = out.with_suffix(".transcript.json")
+        tl.write_text(json.dumps({"segments": segs}, ensure_ascii=False, indent=1), encoding="utf-8")
+        meta["transcript"] = tl.name
     out.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"[aroll] xong: {out} ({total:.2f} s, {len(starts)} câu) + {out.with_suffix('.json').name}")
 

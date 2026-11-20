@@ -39,7 +39,7 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - write prices the Vietnamese way: "8.190.000đ" or "8,19 triệu".
 4. **Choose sentences.** Write `edited/cuts.json` with one entry per sentence you keep, in order:
    - drop retakes (keep the later, cleaner take), false starts, "cắt nhé" and dead air;
-   - in = first word −0.08 s, out = last word +0.15 s.
+   - in = first word −0.08 s, out = last word +0.15 s; add "transcripts" (the source .transcript.json files) so aroll.py also writes aroll.transcript.json for captions and the sound brain.
 
    Then run `aroll.py edited/cuts.json -o edited/aroll.mp4 --speed 1.1`. It produces a single lip-sync-safe A-roll plus `aroll.json`, which holds the sentence start times.
 5. **Build.** Do the creative pass in `references/edit_brain.md` first. Pick an edit style, 3 motifs and a rhythm map, then write the storyboard table. Never reuse the previous video's sequence. Copy `templates/build_vip.py` to `edited/` and fill it in:
@@ -47,7 +47,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - give each sentence a `cap(i, top, text)`;
    - give each sentence a camera move (`cam`), with HOOK on sentence 0, a SNAP or EMPH on the 2–3 biggest keywords, and alternating PUSH / PUNCH / PULL on the rest;
    - add one VIP effect every 3–5 s, chosen from the industry row and placed **on the word that names it** (a price triggers `CountUp`, "3 điều" triggers `NumberList`, "đau đầu" triggers `Cracks`);
-   - keep `"sound_design": "trend"` on: every effect gets a layered sound from the trend pack automatically, so add sounds by hand only where they carry the story (riser into a reveal, silence before a punchline);
+   - keep the sound brain on (`"sound_design": {"style": "trend", "brain": {...}}`, see edit_brain.md §4a): effect sounds follow the picture, story sounds follow the words. Then read `sound_brain.py`'s suggestions and cut anything that does not add meaning;
+   - previously `"sound_design": "trend"` meant: every effect gets a layered sound from the trend pack automatically, so add sounds by hand only where they carry the story (riser into a reveal, silence before a punchline);
    - add 2–4 frost scenes per minute;
    - end with a CTA.
 6. **Render.** Run `build_vip.py`, then `render.py plan_vip.json --draft`. Renders over 2 min run in the background. The first render of each motion item takes 3–5 s; person matting takes about 1 s per second of effect.

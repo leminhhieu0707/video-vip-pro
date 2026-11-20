@@ -17,7 +17,8 @@ from pathlib import Path
 import os
 
 PACK = Path(os.environ["MH_SFX_PACK"]) if os.environ.get("MH_SFX_PACK") else     Path(__file__).resolve().parent.parent / "assets" / "sfx" / "pack"
-MINE = Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"   # user's own sounds (import_sfx.py)
+MINE = Path(os.environ["MH_SFX_MINE"]) if os.environ.get("MH_SFX_MINE") else \
+    Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"   # user's own sounds (import_sfx.py)
 _index: dict | None = None
 _mine: dict | None = None
 _turn: dict[str, int] = {}

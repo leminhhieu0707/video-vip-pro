@@ -12,12 +12,14 @@ Re-run any time; already imported files are skipped. Use only sounds you are all
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import re
 import shutil
 from pathlib import Path
 
-MINE = Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"
+MINE = Path(os.environ["MH_SFX_MINE"]) if os.environ.get("MH_SFX_MINE") else \
+    Path(__file__).resolve().parent.parent / "assets" / "sfx" / "mine"
 EXT = {".wav", ".mp3", ".aif", ".aiff", ".flac", ".ogg", ".m4a"}
 # family: keywords (checked against "folder/file" lower-case, first match wins — specific before generic)
 RULES = [
