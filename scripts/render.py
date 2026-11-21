@@ -15,8 +15,11 @@ import argparse
 import hashlib
 import json
 import sys
+import subprocess
 import time
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from assgen import build_ass, resolve_pos  # noqa: E402
@@ -460,9 +463,54 @@ def resolve_sfx(name: str, root: Path) -> Path | None:
     return None
 
 
+# Library sounds differ by 30 dB+ (a cinematic boom peaks near 0 dB, a pencil or mouse click near -30 dB), so the same
+# plan volume made quiet ones vanish under the voice and loud ones slam the limiter. With a sound design on, every file
+# is first levelled to a target loudness (loudest 100 ms window), impacts a bit hotter, then the plan volume applies.
+SFX_TARGET_DB = -13.0
+SFX_TARGET_FAMILY = {"boom": -7.0, "hit": -7.0, "impact": -7.0, "vine": -7.0, "riser": -11.0}
+SFX_MAX_BOOST_DB = 20.0
+_SFX_NORM: dict | None = None
+_SFX_NORM_FILE = Path.home() / ".cache" / "video-vip-pro" / "sfx_norm.json"
+
+
+def sfx_norm(path: Path) -> float:
+    """Linear gain that brings this sound file's loudest 100 ms to its family target (cached per file)."""
+    global _SFX_NORM
+    if _SFX_NORM is None:
+        try:
+            _SFX_NORM = json.loads(_SFX_NORM_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            _SFX_NORM = {}
+    p = Path(path)
+    try:
+        st = p.stat()
+    except OSError:
+        return 1.0
+    key = f"{p.resolve()}|{st.st_size}|{int(st.st_mtime)}"
+    if key not in _SFX_NORM:
+        raw = subprocess.run([FFMPEG, "-v", "error", "-i", str(p), "-t", "4", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+                             capture_output=True).stdout
+        x = np.frombuffer(raw, np.float32)
+        w = 1600
+        if len(x) < w:
+            x = np.pad(x, (0, w - len(x)))
+        peak = max(float(np.sqrt((x[i:i + w] ** 2).mean())) for i in range(0, len(x) - w + 1, w // 2))
+        _SFX_NORM[key] = round(20 * np.log10(peak + 1e-9), 2)
+        try:
+            _SFX_NORM_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _SFX_NORM_FILE.write_text(json.dumps(_SFX_NORM, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+    fam = p.stem.split("_")[0].lower()
+    target = SFX_TARGET_FAMILY.get(fam, SFX_TARGET_DB)
+    db = max(-40.0, min(SFX_MAX_BOOST_DB, target - float(_SFX_NORM[key])))
+    return 10 ** (db / 20)
+
+
 def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path, float, float, float]]:
     """[(file, time_on_timeline, volume, max_len)] from plan['sfx'] and plan['auto_sfx'].
-    Long library sounds (applause, ticking, laughs) are cut to max_len with a fade-out."""
+    Long library sounds (applause, ticking, laughs) are cut to max_len with a fade-out.
+    With a sound design on, each file is levelled first (sfx_norm) so the plan volume means the same for every sound."""
     root = Path(plan.get("_root", "."))
     import sound
     gain = float(plan.get("sfx_gain", 6.0 if plan.get("sound_design") else 1.0))  # effect level vs. the voice
@@ -530,6 +578,8 @@ def sfx_events(plan: dict, starts: list[float], total: float) -> list[tuple[Path
             if f:
                 at = parse_time(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0)
                 ev.append((f, at, float(o.get("sfx_volume", vol)), float(o.get("sfx_len", 3.0))))
+    if plan.get("sound_design") and plan.get("sfx_normalize", True):
+        ev = [(f, at, round(v * sfx_norm(f), 4), mx) for f, at, v, mx in ev]
     return [e for e in ev if 0 <= e[1] < total]
 
 FROST_TINTS = {"light": "0xEEF2FF@0.62", "blue": "0x2A44C8@0.40", "dark": "0x0B1020@0.45", "white": "0xFFFFFF@0.7",

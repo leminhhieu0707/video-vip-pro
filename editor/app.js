@@ -507,7 +507,9 @@ function playSfx(t) {
   for (const s of P.sfx) {
     if (s.at >= lastSfxT && s.at < t) {
       const a = new Audio(mediaUrl(s.src));
-      a.volume = clamp(s.vol * 1.5, 0, 1);
+      // s.vol is the export gain (already levelled per file); the export also ducks effects ~5 dB under speech,
+      // so play at half to sound like the finished video instead of every effect at full blast
+      a.volume = clamp(s.vol * 0.5, 0, 1);
       a.play().catch(() => { });
       setTimeout(() => a.pause(), (s.len || 3) * 1000);
     }
