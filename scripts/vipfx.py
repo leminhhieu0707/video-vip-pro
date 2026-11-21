@@ -59,6 +59,24 @@ MATTE_VERSION = 4
 MATTE_MODEL = "u2net"  # tested 20/11: cleaner than u2net_human_seg (which grabbed a wall logo) and more solid than isnet
 
 
+_SESS: dict = {}
+
+
+def rembg_session(name: str = "u2net"):
+    """rembg session on the GPU when there is one (CUDA, else DirectML on Windows), cached per model.
+    rembg's default picks the CPU even when onnxruntime-directml is installed: 0.41 s vs 0.03 s per frame (RTX 3060)."""
+    if name not in _SESS:
+        import onnxruntime as ort
+        from rembg import new_session
+        have = ort.get_available_providers()
+        prov = [p for p in ("CUDAExecutionProvider", "DmlExecutionProvider") if p in have] + ["CPUExecutionProvider"]
+        try:
+            _SESS[name] = new_session(name, providers=prov)
+        except Exception:
+            _SESS[name] = new_session(name)
+    return _SESS[name]
+
+
 def times(o: dict, starts: list[float], total: float) -> tuple[float, float]:
     off = starts[int(o["clip"])] if "clip" in o else 0.0
     s = parse_time(o.get("start", 0)) + off
@@ -83,8 +101,7 @@ def make_matte(base: Path, s: float, e: float, W: int, H: int, fps: int, work: P
                                "-r", str(fps), "-i", "-", "-c:v", "libx264", "-crf", "8", "-preset", "fast",
                                "-pix_fmt", "yuv420p", str(tmp)], stdin=subprocess.PIPE)
     from PIL import Image
-    from rembg import new_session
-    sess = new_session(MATTE_MODEL)
+    sess = rembg_session(MATTE_MODEL)
     prev = None
     n = 0
     while True:
@@ -222,9 +239,11 @@ def outline(o: dict, k: int, vlast: str, cx: Ctx, s: float, e: float, fd: float)
     return f"[vo{k}]"
 
 
-def _png_input(cx: Ctx, png: Path, dur: float, s: float, lab: str) -> str:
-    i = cx.add_input(["-loop", "1", "-framerate", str(cx.fps), "-t", f"{dur + 0.2:.3f}", "-i", str(png)])
-    cx.fc.append(f"[{i}:v]format=rgba,setpts=PTS-STARTPTS+{s:.3f}/TB{lab}")
+def _png_input(cx: Ctx, png: Path, dur: float, s: float, lab: str, fmt: str = "rgba") -> str:
+    """A still held for dur seconds from s: decoded ONCE and cloned (a looped image input re-decodes every frame)."""
+    i = cx.add_input(["-i", str(png)])
+    cx.fc.append(f"[{i}:v]format={fmt},tpad=stop_mode=clone:stop_duration={dur + 0.2:.3f},fps={cx.fps},"
+                 f"setpts=PTS-STARTPTS+{s:.3f}/TB{lab}")
     return lab
 
 
@@ -272,9 +291,8 @@ def freeze_pngs(cx: Ctx, o: dict, at: float) -> tuple[Path, Path]:
     subprocess.run([FFMPEG, "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(cx.base), "-frames:v", "1",
                     "-vf", f"scale={cx.W}:{cx.H}", str(plain)], check=True)
     fr = Image.open(plain).convert("RGB")
-    from rembg import new_session
     # one still, so afford two models: u2net (solid body) + u2net_human_seg (keeps spread arms and hands), main blob only
-    ms = [np.asarray(new_session(n).predict(fr)[0].resize(fr.size, Image.BILINEAR), np.float32) / 255.0
+    ms = [np.asarray(rembg_session(n).predict(fr)[0].resize(fr.size, Image.BILINEAR), np.float32) / 255.0
           for n in (MATTE_MODEL, "u2net_human_seg")]
     m = keep_main_blob(np.clip((np.maximum(*ms) - 0.2) / 0.55, 0, 1))
     # room: darker / black-and-white / brand tint, a little blur
@@ -350,8 +368,7 @@ def grab_frame(cx: Ctx, t: float) -> "Image":
 
 def still_matte(img, models=(MATTE_MODEL, "u2net_human_seg")) -> np.ndarray:
     from PIL import Image
-    from rembg import new_session
-    ms = [np.asarray(new_session(n).predict(img)[0].resize(img.size, Image.BILINEAR), np.float32) / 255.0 for n in models]
+    ms = [np.asarray(rembg_session(n).predict(img)[0].resize(img.size, Image.BILINEAR), np.float32) / 255.0 for n in models]
     return keep_main_blob(np.clip((np.maximum.reduce(ms) - 0.2) / 0.55, 0, 1))
 
 
@@ -994,9 +1011,11 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         # so the lit side of the face gains exposure but keeps its texture (no colour wash)
         m = cx.matte_in(s, e, k, "r")
         fc.append(f"{m}split=2[rkm{k}][rrm{k}]")
-        km = _png_input(cx, key_png(cx, side, face), e - s, s, f"[rkp{k}]")
-        fc.append(f"{km}format=gray[rkg{k}];[rkm{k}][rkg{k}]blend=all_mode=multiply:shortest=1,"
-                  f"lut=y='val*{P['key'][1] * st:.3f}'[rka{k}]")
+        q4w, q4h = W // 4, H // 4
+        km = _png_input(cx, key_png(cx, side, face), e - s, s, f"[rkp{k}]", "gray")
+        fc.append(f"{km}scale={q4w}:{q4h}[rkg{k}];[rkm{k}]scale={q4w}:{q4h},format=gray[rkq{k}];"
+                  f"[rkq{k}][rkg{k}]blend=all_mode=multiply:shortest=1,lut=y='val*{P['key'][1] * st:.3f}',"
+                  f"scale={W}:{H}:flags=bilinear[rka{k}]")
         fc.append(f"[rlp{k}]split=2[rlp1{k}][rlp2{k}];[rlp2{k}]eq=gamma={1 + 0.32 * st:.3f}:brightness={0.02 * st:.3f}:contrast=1.03,"
                   f"colortemperature=temperature={int(P['key'][0])}:mix={0.6 * st:.2f},format=rgba[rkb{k}]")
         fc.append(f"[rkb{k}][rka{k}]alphamerge[rk{k}];[rlp1{k}][rk{k}]overlay=0:0:shortest=1[rlk{k}]")
@@ -1005,9 +1024,10 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         fc.append(f"[rrm{k}]scale={W // q}:{H // q},format=gray,split=2[rre{k}][rro{k}];"
                   f"[rre{k}]gblur=sigma=3,lut=y='if(gt(val,235),255,0)'[rri{k}];"
                   f"[rro{k}]lut=y='if(gt(val,110),255,0)'[rrf{k}];"
-                  f"[rrf{k}][rri{k}]blend=all_mode=difference,scale={W}:{H}:flags=bicubic,gblur=sigma=2.5[rrb{k}]")
-        rs = _png_input(cx, rimside_png(cx, side), e - s, s, f"[rrs{k}]")
-        fc.append(f"{rs}format=gray[rrg{k}];[rrb{k}][rrg{k}]blend=all_mode=multiply:shortest=1,lut=y='min(255,val*{P['rim'][1] * st * 1.6:.3f})'[rra{k}]")
+                  f"[rrf{k}][rri{k}]blend=all_mode=difference,gblur=sigma=0.7[rrb{k}]")
+        rs = _png_input(cx, rimside_png(cx, side), e - s, s, f"[rrs{k}]", "gray")
+        fc.append(f"{rs}scale={q4w}:{q4h}[rrg{k}];[rrb{k}][rrg{k}]blend=all_mode=multiply:shortest=1,"
+                  f"lut=y='min(255,val*{P['rim'][1] * st * 1.6:.3f})',scale={W}:{H}:flags=bilinear[rra{k}]")
         rc = _color(cx, P["rim"][0], s, e, f"[rrc{k}]")
         fc.append(f"{rc}[rra{k}]alphamerge[rr{k}];[rlk{k}][rr{k}]overlay=0:0:shortest=1,format=yuv420p[rlz{k}]")
         out = f"[rlz{k}]"
@@ -1022,6 +1042,15 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     if t == "prop":
         png = prop_png(cx, o, s + 0.05)
         pl = _png_input(cx, png, e - s, s, f"[pr{k}]")
+        if o.get("behind") is None:  # auto: only occlude when the prop's box reaches the speaker
+            from PIL import Image
+            bb = Image.open(png).getbbox() or (0, 0, 0, 0)
+            px0, _, px1, _ = (b / cx.W for b in bb)
+            sx, _, _ = person_box(cx, s)
+            m = still_matte(grab_frame(cx, s)) > 0.5
+            cols = np.nonzero(m.any(axis=0))[0]
+            l, rr = (cols.min() / m.shape[1], cols.max() / m.shape[1]) if len(cols) else (sx - 0.2, sx + 0.2)
+            o = {**o, "behind": not (px1 < l - 0.01 or px0 > rr + 0.01)}
         if o.get("behind") is False:
             fc.append(f"{clean}nullsink")
             fc.append(f"{pl}{_fades(s, e, cx.total, fd)}[pro{k}]")

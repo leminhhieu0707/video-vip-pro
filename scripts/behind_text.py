@@ -152,8 +152,8 @@ def main():
                                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)],
                               stdin=subprocess.PIPE)
 
-    from rembg import new_session
-    sess = new_session(a.model)
+    import vipfx
+    sess = vipfx.rembg_session(a.model)
     prev = None
     n = 0
     fsz = W * H * 3

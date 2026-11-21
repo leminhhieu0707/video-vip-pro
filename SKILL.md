@@ -1,6 +1,6 @@
 ---
 name: video-vip-pro
-description: One-call premium video editor for talking-head and sales videos in any industry (shop, real estate, spa, F&B, education, tech, finance, gym, travel, news, vlog) with a brand colour of the user's choice. Takes a raw video, transcribes it (Vietnamese or any language), cuts bad takes lip-sync safe, adds rhythmic zooms with motion blur, two-tier captions, frosted-glass scenes and ~60 VIP effects (text behind the head, portrait blur, person breaking out of the frame, freeze-frame character intro, spotlight, count-up prices, price slash, printing receipt, map pin, stamps, tear-away, cracks, shockwave, orbit ring, speed ramps, whip / glitch / light-leak / zoom-through transitions, neon outline, clones, dolly zoom, face bubble, anime impact frame, 3D photo, evidence board, seamless loop ending, film/VHS looks, UI mockups) plus a Studio Look pack (colour match between clips, fake relighting of a plain room, decor props behind the speaker) and a 26-style premium text pack (3D text in the room, text weaving around the speaker, projected / glass / gold / neon text, handwriting, odometer prices, rotating seals, cube flips, tracked price labels, documentary labels, quote cards, AI chat, beat-synced words), sound effects and music, then renders a 9:16/16:9 MP4. Afterwards the user refines it with plain prompts or the local VIP Editor (0 token). Use when the user says "edit video VIP", "dựng video kiểu VIP / pro", "edit video này", "đổi màu chủ đạo", or gives a raw video to edit with this skill.
+description: One-call premium video editor for talking-head and sales videos in any industry (shop, real estate, spa, F&B, education, tech, finance, gym, travel, news, vlog) with a brand colour of the user's choice. Takes a raw video, transcribes it (Vietnamese or any language), cuts bad takes lip-sync safe, adds rhythmic zooms with motion blur, two-tier captions, frosted-glass scenes and ~60 VIP effects (text behind the head, portrait blur, person breaking out of the frame, freeze-frame character intro, spotlight, count-up prices, price slash, printing receipt, map pin, stamps, tear-away, cracks, shockwave, orbit ring, speed ramps, whip / glitch / light-leak / zoom-through transitions, neon outline, clones, dolly zoom, face bubble, anime impact frame, 3D photo, evidence board, seamless loop ending, film/VHS looks, UI mockups) plus a Studio Look pack (colour match between clips, fake relighting of a plain room, decor props behind the speaker) and a 26-style premium text pack (3D text in the room, text weaving around the speaker, projected / glass / gold / neon text, handwriting, odometer prices, rotating seals, cube flips, tracked price labels, documentary labels, quote cards, AI chat, beat-synced words), sound effects and music, then renders a 9:16/16:9 MP4. An edit brain (fx_brain.py) watches the footage and reads every sentence to pick which effect goes on which word. Afterwards the user refines it with plain prompts or the local VIP Editor (0 token). Use when the user says "edit video VIP", "dựng video kiểu VIP / pro", "edit video này", "đổi màu chủ đạo", or gives a raw video to edit with this skill.
 ---
 
 # Video VIP Pro
@@ -16,7 +16,7 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
 | picking effects / colour for the business | the matching row of `references/industries.md` |
 | a plan field you are unsure of | grep `references/plan.md` (full schema) |
 | non-talking-head genres (montage, slideshow, tutorial, podcast) | the matching section of `references/recipes.md` |
-| starting the builder | copy `templates/build_vip.py` |
+| starting the builder | run `scripts/fx_brain.py` (edit brain), then copy `templates/build_vip.py` |
 
 ## One-call workflow (do all of it without asking, unless a choice really changes the result)
 1. **Brief.** Infer these:
@@ -44,7 +44,11 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    Then run `aroll.py edited/cuts.json -o edited/aroll.mp4 --speed 1.1`. It produces a single lip-sync-safe A-roll plus `aroll.json`, which holds the sentence start times.
 
    **Face retouch** (when the user asks for "mịn da / sáng da / xoá thâm mắt / môi son"): run `face_beauty.py edited/aroll.mp4 --still 4` first and look at the before|after JPG, then the full pass `face_beauty.py edited/aroll.mp4 -o edited/aroll_face.mp4 --skin 0.5 --bright 0.5 --eyes 0.75 --lips 0.14` and swap it in as `aroll.mp4` (same frames, audio copied, so sync is kept). Keep `--lips` at 0.1–0.2 for men: 0.28 already reads as lipstick. About 4 min per 30 s of 1080p.
-5. **Build.** Do the creative pass in `references/edit_brain.md` first. Pick an edit style, 3 motifs and a rhythm map, then write the storyboard table. Never reuse the previous video's sequence. Copy `templates/build_vip.py` to `edited/` and fill it in:
+5. **Edit brain.** Run `fx_brain.py edited/aroll.json --brand "<brand>" --plan edited/plan_vip.json` (add `--industry`, `--theme`, `--density calm|rich`, `--studio on|off`, `--comedy` when you know better than the guess). It watches the A-roll (face, free space, table line, brand colour from the logo, light, tripod or handheld) and reads every sentence (prices, discounts, lists, comparisons, places, years, questions, the turn, calls to action), then picks effects with the variety rules and writes `brain.json` plus a one-line-per-sentence report. Read the report:
+   - **fast / 0-token edit** ("làm nhanh", "tự edit hết"): render that `plan_vip.json` directly (`render.py edited/plan_vip.json --draft`), then go to step 8;
+   - **normal edit**: the copied `build_vip.py` loads `brain.json` automatically — keep its picks as the draft, drop weak ones with `SKIP`, fix wrong guesses (industry, theme, keyword), and add the creative touches below.
+   Never keep a pick that contradicts the words (a price card on a sentence without that price, a map without the address).
+6. **Build.** Do the creative pass in `references/edit_brain.md` first. Pick an edit style, 3 motifs and a rhythm map, then write the storyboard table. Never reuse the previous video's sequence. Copy `templates/build_vip.py` to `edited/` and fill it in:
    - set `THEME`, `FACE`, `CAP_Y`;
    - give each sentence a `cap(i, top, text)`;
    - give each sentence a camera move (`cam`), with HOOK on sentence 0, a SNAP or EMPH on the 2–3 biggest keywords, and alternating PUSH / PUNCH / PULL on the rest;
@@ -53,8 +57,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - previously `"sound_design": "trend"` meant: every effect gets a layered sound from the trend pack automatically, so add sounds by hand only where they carry the story (riser into a reveal, silence before a punchline);
    - add 2–4 frost scenes per minute;
    - end with a CTA.
-6. **Render.** Run `build_vip.py`, then `render.py plan_vip.json --draft`. Renders over 2 min run in the background. The first render of each motion item takes 3–5 s; person matting takes about 1 s per second of effect.
-7. **Check your own output.** Run `analyze.py <draft> --every 1` and Read every sheet. Look for:
+7. **Render.** Run `build_vip.py`, then `render.py plan_vip.json --draft`. Renders over 2 min run in the background. The first render of each motion item takes 3–5 s; person matting takes about 1 s per second of effect.
+8. **Check your own output.** Run `analyze.py <draft> --every 1` and Read every sheet. Look for:
    - text clipped or covering the face;
    - effects that land on the wrong word;
    - unreadable colours for this theme;
@@ -63,8 +67,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - **missing effect sounds.** The render log prints `tiếng hiệu ứng: N tiếng cho M hiệu ứng`; N should be at least M. Also count `adelay` in `<plan>_work/final.fc` (= sounds actually mixed + 1 for music) and compare it with `len(render.sfx_events(plan, starts, total))`. If they differ, the export is dropping sounds that the VIP Editor still plays. Never hand over a video until the two counts match.
 
    Fix the builder and re-render; the segment and motion caches make this fast. Allow at most 3 rounds per issue.
-8. **Final.** Run `render.py plan_vip.json` (no `--draft`).
-9. **Deliver.** Send the MP4 (via `SendUserFile` if available). Then:
+9. **Final.** Run `render.py plan_vip.json` (no `--draft`).
+10. **Deliver.** Send the MP4 (via `SendUserFile` if available). Then:
    - give a 3–5 line summary: length, theme, the effects used and on which sentence, and anything you guessed;
    - start the VIP Editor in the background, `python -X utf8 <skill>/editor/server.py edited/plan_vip.json`, so the user can drag, retime, retype and recolour by hand for 0 token.
 

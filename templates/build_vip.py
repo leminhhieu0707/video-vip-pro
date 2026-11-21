@@ -21,10 +21,20 @@ AR = json.loads((HERE / "aroll.json").read_text(encoding="utf-8"))
 STARTS, END = AR["starts"], AR["total"]
 SENT = [c["text"] for c in AR["cuts"]]           # sentence i plays from STARTS[i] to STARTS[i+1]
 
+# ---------------------------------------------------------------- edit brain (scripts/fx_brain.py -> brain.json)
+# The brain watched the video and read every sentence: its picks (captions, camera, effects, Studio Look) are the
+# starting draft. Keep what fits the story, drop with SKIP, add your own blocks in SCRIPT below.
+BRAIN_FILE = HERE / "brain.json"
+B = json.loads(BRAIN_FILE.read_text(encoding="utf-8")) if BRAIN_FILE.exists() else None
+USE_BRAIN = B is not None
+SKIP = set()              # sentence indices whose brain effect you do not want, e.g. {3, 7}
+BRAIN_CAPS = True         # use the brain's two-tier captions (set False to write every cap() yourself)
+BRAIN_STUDIO = True       # use the brain's relight / props / colour match
+
 # ---------------------------------------------------------------- settings
-THEME = "blue"            # blue | orange | red | gold | blackgold | green | pink | purple | teal | sky | brown | mono | "#RRGGBB"
-FACE = (0.5, 0.3)         # where the face is in the frame (0–1) — zooms aim here
-CAP_Y = 0.75              # caption height (chest); 0.70 if the speaker sits low
+THEME = B["theme"] if B else "blue"   # blue | orange | red | gold | blackgold | green | pink | purple | teal | sky | brown | mono | "#RRGGBB"
+FACE = tuple(B["analysis"]["face"]) if B else (0.5, 0.3)   # where the face is (0–1) — zooms aim here
+CAP_Y = (round(min(0.8, max(0.66, B["analysis"]["face"][1] + B["analysis"]["face_h"] * 2.6)), 3) if B else 0.75)  # caption height (chest)
 MUSIC = None              # path to an mp3 (royalty-free!) or None -> generated bed (make_music.py) or no music
 OUTPUT = "video_vip.mp4"
 
@@ -72,18 +82,38 @@ SNAP = {"zooms": [{"at": 0, "to": 2.1, "in": 0, "hold": 0.4, "out": 0.45, "x": F
 EMPH = {"zooms": [{"at": 0.3, "to": 1.25, "in": 0.12, "hold": 1.4, "out": 0.4, "x": FACE[0], "y": FACE[1]}],
         "shake": {"at": 0.3, "dur": 0.35, "amp": 12}}
 cam = {0: HOOK}            # sentence index -> move; unlisted sentences cycle PUSH / PUNCH / PULL
+if USE_BRAIN:              # the brain's camera plan (HOOK / SNAP / EMPH on the strongest lines, alternating rest)
+    _M = {"HOOK": HOOK, "SNAP": SNAP, "EMPH": EMPH, "PUSH": PUSH, "PULL": PULL, "PUNCH": PUNCH, "STILL": {}}
+    cam = {int(k): _M[v] for k, v in B["cam"].items()}
 cycle = [PUSH, PUNCH, PULL, PUSH, {}]
 clips = []
 for i in range(len(STARTS)):
     move = cam.get(i, cycle[i % len(cycle)])
     clips.append({"src": AR["src"], "in": S(i), "out": E(i), "focus": FACE[0], **move})
 
+# ---------------------------------------------------------------- brain picks
+if USE_BRAIN:
+    if BRAIN_STUDIO:
+        ov += B["studio"].get("props", [])
+        if B["studio"].get("relight"):
+            ov.append(B["studio"]["relight"])
+    for k, p in sorted(B["picks"].items(), key=lambda kv: int(kv[0])):
+        if int(k) not in SKIP:
+            ov += p["layers"]
+    if BRAIN_CAPS:
+        for c in B["captions"]:
+            ov.append({"type": "motion", "comp": "BlueText", "start": c["start"], "end": c["end"],
+                       "props": {"top": c["top"], "text": c["text"], "y": CAP_Y, "tone": "video"}})
+    if B.get("loopback"):
+        ov.append({"type": "loopback", "duration": 0.5})
+
 # ---------------------------------------------------------------- SCRIPT: one block per sentence (examples — replace)
-# 0  hook: blurred room + giant word behind the head
-layer("bg", S(0), E(0), blur=28, fade=0.3)
-motion("GiantCaption", S(0) + 0.15, E(0), {"behind": True}, text="EDIT", y=0.17, size=330)
-cap(0, "câu mở đầu", "từ **khoá** _cảm xúc_")
-fx(0, "whoosh_fast", 0.18)
+if not USE_BRAIN:
+    # 0  hook: blurred room + giant word behind the head
+    layer("bg", S(0), E(0), blur=28, fade=0.3)
+    motion("GiantCaption", S(0) + 0.15, E(0), {"behind": True}, text="EDIT", y=0.17, size=330)
+    cap(0, "câu mở đầu", "từ **khoá** _cảm xúc_")
+    fx(0, "whoosh_fast", 0.18)
 
 # a number -> ink spread into the navy grid scene with a count-up
 # motion("InkSpread", S(2) - 0.25, S(2) + 0.65, x=0.5, y=0.3, color="#0B1E5E", hold=0.32); fx(S(2) - 0.25, "whoosh_cinematic")
@@ -112,6 +142,7 @@ plan = {
     "clips": clips,
     "overlays": ov,
     "sfx": sfx,
+    **({"color_match": {"strength": 0.7}} if USE_BRAIN and BRAIN_STUDIO and B["studio"].get("color_match") else {}),
     "audio": {**({"music": music} if music else {}), "normalize": -14},
     "fade_out": 0.4,
     "quality": "high",

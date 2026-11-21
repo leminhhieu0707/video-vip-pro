@@ -1,6 +1,6 @@
 # 🎬 Video VIP Pro: skill edit video cho Claude Code
 
-Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 100 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
+Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, rồi **bộ não edit** tự xem video + đọc từng câu để chọn hiệu ứng (giá → số lăn, liệt kê → checklist, địa chỉ → bản đồ, câu chuyển ý → người bung khung, màu theo logo, phòng phẳng → đánh đèn), zoom theo nhịp, gắn chữ 2 tầng và khoảng 100 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
 
 - **Mọi ngành:** bán hàng, điện thoại, bất động sản, spa/làm đẹp, ăn uống, giáo dục/khoá học, tài chính, gym, du lịch, ô tô, thời trang, tin tức, vlog.
 - **Màu chủ đạo theo ý bạn:** có sẵn 12 bộ màu (xanh, cam, đỏ, vàng kim, đen vàng, xanh lá, hồng, tím, ngọc, da trời, nâu, đen), hoặc bất kỳ mã màu nào. Cả video đổi màu theo, kể cả hiệu ứng chuyển động.

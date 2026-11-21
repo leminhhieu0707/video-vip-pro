@@ -36,9 +36,8 @@ def make(src: str, dur: float, W: int, H: int, fps: int, work: Path, opts=True) 
     img = img.crop((l, t, l + cw, t + ch))
     a = np.asarray(img)
 
-    from rembg import new_session
     import vipfx
-    m = np.asarray(new_session("u2net").predict(img)[0].resize(img.size, Image.BILINEAR), np.float32) / 255.0
+    m = np.asarray(vipfx.rembg_session("u2net").predict(img)[0].resize(img.size, Image.BILINEAR), np.float32) / 255.0
     m = vipfx.keep_main_blob(np.clip((m - 0.25) / 0.5, 0, 1))
     if (m > 0.5).mean() < 0.03 or (m > 0.5).mean() > 0.8:
         return None  # no clear subject: plain Ken Burns is the better look

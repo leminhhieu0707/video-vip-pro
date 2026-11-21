@@ -138,3 +138,15 @@ Families (from `get_sfx.py`): whoosh, boom, hit, pop, click, sparkle, bling, din
 
 ## 5. Write the storyboard first
 In `build_vip.py`, before the code, write a table: one row per sentence, with columns **time | words | visual | effect | camera | sound**. Then implement exactly that table. A builder that is a list of `motion(...)` calls without a storyboard almost always ends up formulaic.
+
+
+## 6. The automatic edit brain (`scripts/fx_brain.py`)
+Run it right after `aroll.py`. It is the first draft of every creative decision in this file, made from the actual footage:
+
+**What it sees** (≈36 frames + 3 person mattes): face position and size (YuNet), the speaker's extent, the free band above the head and the free side, the table / counter line, the brand colour (strongest saturated hue in the room, e.g. a red logo → theme `red`), exposure and contrast (flat or dim room → Studio Look), tripod or handheld (background motion → whether person-aware effects, props and dolly are safe), clutter beside the speaker (empty corner → a prop).
+
+**What it reads** (every sentence, accented Vietnamese): prices ("3 triệu 490 nghìn" → 3.490.000đ, "24.990.000đ", "500k"), discounts, questions, comparisons, lists ("gồm A, B, C", "3 cách", "thứ nhất"), places and addresses, years and stories, money words, shock words, quality words, tech words, the turn ("nhưng", "mà khoan", "chưa hết"), intros, calls to action, quotes; plus the industry from the vocabulary.
+
+**How it picks:** every effect in the catalogue serves some intents and suits some styles; each (sentence, effect) gets a score (intent match, sentence energy, small random so videos differ — change `--seed` for another valid version). Then a greedy pass keeps the best scores under the rules of §3: target density from the industry (effects per 30 s), at least 2.4 s between effects, hero effects spaced by the style's gap, no effect twice within 2 sentences, hero effects once per video, CTA cards only at the end, a forced hook on sentence 0 (keyword behind the head on tripod shots, else a decode reveal), an ending (map / follow card) without repeats. Camera: HOOK, SNAP/EMPH on the highest-energy lines, alternating PUSH / PUNCH / PULL, STILL under person-aware scenes. Captions: two-tier chunks of ≤ 7 words timed on the word times, one `**keyword**` (price > product > intent word > proper noun > longest word). Every effect starts on the word that names it.
+
+**Your job after it runs:** read the report (one line per sentence: time, camera, effect, tags, text). Keep what serves the story, `SKIP` what does not, correct a wrong industry / theme with the flags, and add the touches only a human editor sees (a joke, a callback, a silent beat). The brain never invents numbers or places: if a card shows something odd, the transcript is wrong — fix the transcript, not the card.
