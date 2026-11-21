@@ -842,6 +842,14 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
 
     # sound effects (explicit list + automatic ones on transitions / overlay entrances)
     hits = sfx_events(plan, starts, total)
+    if plan.get("sound_design"):
+        # guard: the export once kept only 13 of 45 effect sounds while the editor played them all — say it loudly
+        fxn = sum(1 for o in plan.get("overlays", []) or []
+                  if (o.get("_motion") or o.get("comp")) not in (None, "BlueText") and "sfx" not in o)
+        print(f"[render] tiếng hiệu ứng: {len(hits)} tiếng cho {fxn} hiệu ứng", flush=True)
+        if fxn and len(hits) < fxn * 0.6:
+            print("[render] CẢNH BÁO: số tiếng ít hơn hẳn số hiệu ứng — kiểm tra sound.design / sfx_events trước khi giao",
+                  flush=True)
     if hits:
         labels = []
         for j, (path, at, vol, mx) in enumerate(hits):

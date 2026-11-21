@@ -59,7 +59,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - effects that land on the wrong word;
    - unreadable colours for this theme;
    - black or frozen frames;
-   - loudness away from −14 LUFS.
+   - loudness away from −14 LUFS;
+   - **missing effect sounds.** The render log prints `tiếng hiệu ứng: N tiếng cho M hiệu ứng`; N should be at least M. Also count `adelay` in `<plan>_work/final.fc` (= sounds actually mixed + 1 for music) and compare it with `len(render.sfx_events(plan, starts, total))`. If they differ, the export is dropping sounds that the VIP Editor still plays. Never hand over a video until the two counts match.
 
    Fix the builder and re-render; the segment and motion caches make this fast. Allow at most 3 rounds per issue.
 8. **Final.** Run `render.py plan_vip.json` (no `--draft`).
