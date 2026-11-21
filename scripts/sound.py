@@ -193,27 +193,30 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
                 out.append(("dwhoosh" if viral else "whoosh", starts[i] - 0.12, float(opts.get("cut_volume", 0.09))))
     if opts.get("captions"):
         for o in plan.get("overlays", []) or []:
-            if o.get("comp") == "BlueText" and "**" in str((o.get("props") or {}).get("text", "")) and "sfx" not in o:
+            if (o.get("_motion") or o.get("comp")) == "BlueText" and "**" in str((o.get("props") or {}).get("text", "")) and "sfx" not in o:
                 out.append(("vclick" if viral else "pop", float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0) + 0.05, 0.1))
     for o in plan.get("overlays", []) or []:
         if "sfx" in o:  # explicit: null = silent, name/list = handled as a plan sound
             continue
-        ty = o.get("type", "text")
-        lay = (smap.get(o.get("comp"), []) if ty == "motion" else tmap.get(ty)
+        # render.prepare_motion turns rendered motion items into "video" overlays (keeping the name in "_motion")
+        # before the audio pass, so read the comp from there too, or every motion effect would lose its sound
+        comp = o.get("_motion") or o.get("comp")
+        ty = "motion" if o.get("_motion") else o.get("type", "text")
+        lay = (smap.get(comp, []) if ty == "motion" else tmap.get(ty)
                or (fmap.get(o.get("effect")) if ty == "fx" else None) or [])
         if ty == "frost" and o.get("mode") == "none":
             lay = [("flash" if viral else "camera", 0.0, 0.16)]
-        if ty == "motion" and o.get("half") == "back":
+        if ty == "motion" and (o.get("half") or (o.get("props") or {}).get("half")) == "back":
             continue
         t0 = float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0)
         for fam, off, vol in lay:
             out.append((fam, t0 + off, vol))
         # list items that pop in one by one get one sound each
         props = o.get("props") or {}
-        if ty == "motion" and o.get("comp") in ("Tiles", "Checklist", "NotifyStack", "ChatBubbles", "CommentsDrop", "Callouts", "IconSlam"):
+        if ty == "motion" and comp in ("Tiles", "Checklist", "NotifyStack", "ChatBubbles", "CommentsDrop", "Callouts", "IconSlam"):
             for it in (props.get("items") or [])[1:6]:
                 if isinstance(it, dict) and it.get("at") is not None:
-                    out.append(("popup" if viral else ("pop" if o["comp"] != "IconSlam" else "hit"), t0 + float(it["at"]), 0.15))
+                    out.append(("popup" if viral else ("pop" if comp != "IconSlam" else "hit"), t0 + float(it["at"]), 0.15))
     for i, c in enumerate(plan.get("clips", []) or []):
         for z in c.get("zooms") or []:
             to = float(z.get("to", 1.2))
