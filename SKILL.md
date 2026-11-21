@@ -42,6 +42,8 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
    - in = first word −0.08 s, out = last word +0.15 s; add "transcripts" (the source .transcript.json files) so aroll.py also writes aroll.transcript.json for captions and the sound brain.
 
    Then run `aroll.py edited/cuts.json -o edited/aroll.mp4 --speed 1.1`. It produces a single lip-sync-safe A-roll plus `aroll.json`, which holds the sentence start times.
+
+   **Face retouch** (when the user asks for "mịn da / sáng da / xoá thâm mắt / môi son"): run `face_beauty.py edited/aroll.mp4 --still 4` first and look at the before|after JPG, then the full pass `face_beauty.py edited/aroll.mp4 -o edited/aroll_face.mp4 --skin 0.5 --bright 0.5 --eyes 0.75 --lips 0.14` and swap it in as `aroll.mp4` (same frames, audio copied, so sync is kept). Keep `--lips` at 0.1–0.2 for men: 0.28 already reads as lipstick. About 4 min per 30 s of 1080p.
 5. **Build.** Do the creative pass in `references/edit_brain.md` first. Pick an edit style, 3 motifs and a rhythm map, then write the storyboard table. Never reuse the previous video's sequence. Copy `templates/build_vip.py` to `edited/` and fill it in:
    - set `THEME`, `FACE`, `CAP_Y`;
    - give each sentence a `cap(i, top, text)`;
