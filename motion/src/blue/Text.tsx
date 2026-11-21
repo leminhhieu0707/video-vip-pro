@@ -51,7 +51,7 @@ export const WeaveText: React.FC<P> = ({duration, text = 'MINH ĐỨC STORE • 
   const spin = t * speed * Math.PI * 2;
   return <AbsoluteFill style={{opacity: o, transform: `rotate(${tilt}deg)`, transformOrigin: `${x * 100}% ${y * 100}%`}}>
     {chars.map((ch, i) => {
-      const a = (i / N) * Math.PI * 2 + spin;
+      const a = spin - (i / N) * Math.PI * 2;  // decreasing angle = left-to-right on the front (readable) side
       const front = Math.sin(a) > 0;
       if ((half === 'back') === front && half !== 'all') return null;
       const sc = 0.72 + 0.28 * (Math.sin(a) + 1) / 2;
@@ -421,7 +421,7 @@ export const CubeFlip: React.FC<P> = ({duration, words = ['RẺ', 'BỀN', 'XỊ
     <div style={{display: 'flex', alignItems: 'center', gap: sz * 0.25}}>
       {prefix ? <div style={{fontFamily: SANS, fontWeight: 800, fontSize: sz * 0.7, color: '#fff', whiteSpace: 'nowrap', textShadow: '0 3px 14px rgba(0,0,0,0.5)'}}>{prefix}</div> : null}
       <div style={{width: w, height: h, perspective: 900}}>
-        <div style={{position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transform: `translateZ(-${h / 2}px) rotateX(${-90 * (k > 0 ? e : 0)}deg)`}}>
+        <div style={{position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transform: `translateZ(-${h / 2}px) rotateX(${k > 0 && f < 1 ? -90 * e : 0}deg)`}}>
           {k > 0 && f < 1 ? <div style={fc(words[k - 1], 0)}>{words[k - 1]}</div> : null}
           <div style={fc(words[k], k > 0 && f < 1 ? 90 : 0)}>{words[k]}</div>
         </div>
