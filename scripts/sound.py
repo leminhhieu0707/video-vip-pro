@@ -57,11 +57,15 @@ SOUND_MAP: dict[str, list[tuple[str, float, float]]] = {
     # TREND pack
     "NameTag": [("whoosh", 0.05, 0.16)], "PriceSlash": [("swipe", 0.3, 0.16), ("hit", 0.75, 0.2), ("kaching", 0.85, 0.16)],
     "Receipt": [("keyboard", 0.2, 0.12), ("kaching", 1.8, 0.18)], "MapPin": [("whoosh", 0.0, 0.16), ("pop", 1.05, 0.18)],
+    "DecodeText": [("keyboard", 0.05, 0.12)], "Countdown": [("ding", 0.0, 0.14)], "EvidenceBoard": [("camera", 0.25, 0.16)], "Audiogram": [("pop", 0.0, 0.1)],
 }
 TYPE_MAP = {"frost": [("whoosh", -0.12, 0.18)], "bg": [("whoosh", -0.08, 0.18)], "popout": [("whoosh", -0.1, 0.2), ("paper", 0.15, 0.14)],
             "lens": [("pop", 0.0, 0.16)], "outline": [("pen", 0.0, 0.16), ("sparkle", 0.2, 0.12)],
             "spotlight": [("boom", 0.0, 0.14)], "freeze": [("camera", 0.0, 0.2), ("hit", 0.05, 0.14)],
-            "whip": [("whoosh", 0.0, 0.22)]}
+            "whip": [("whoosh", 0.0, 0.22)], "glitch": [("glitch", 0.0, 0.2)], "leak": [("whoosh", 0.05, 0.14)],
+            "zoomthru": [("whoosh", 0.0, 0.2), ("boom", 0.25, 0.12)], "impact": [("hit", 0.0, 0.24)],
+            "dramatic": [("vine_boom", 0.0, 0.22)], "dolly": [("riser", 0.0, 0.14)], "clone": [("pop", 0.0, 0.16), ("pop", 0.12, 0.14)],
+            "neon": [("sparkle", 0.0, 0.14)], "facecam": [("pop", 0.0, 0.14)], "colorize": [("sparkle", 0.4, 0.12)]}
 FX_MAP = {"vhs": [("glitch", 0.0, 0.2)], "film": [("camera", 0.0, 0.12)], "bw": [("whoosh", 0.0, 0.12)]}
 
 
@@ -121,11 +125,15 @@ VIRAL_MAP: dict[str, list[tuple[str, float, float]]] = {
     "Eyedropper": [("vclick", 0.8, 0.18)], "CompareHandle": [("data", 0.2, 0.12)], "FollowCard": [("vclick", 0.9, 0.2), ("popup", 1.1, 0.14)],
     "NameTag": [("dwhoosh", 0.05, 0.14)], "PriceSlash": [("dwhoosh", 0.3, 0.14), ("thump", 0.75, 0.2), ("vclick", 0.85, 0.14)],
     "Receipt": [("data", 0.2, 0.12), ("vclick", 1.8, 0.18)], "MapPin": [("dwhoosh", 0.0, 0.14), ("popup", 1.05, 0.16)],
+    "DecodeText": [("data", 0.05, 0.12)], "Countdown": [("vclick", 0.0, 0.14)], "EvidenceBoard": [("flash", 0.25, 0.16)], "Audiogram": [("popup", 0.0, 0.1)],
 }
 VIRAL_TYPE = {"frost": [("dwhoosh", -0.12, 0.16)], "bg": [("cutout", 0.0, 0.18)], "popout": [("cutout", 0.0, 0.2), ("flash", 0.05, 0.12)],
               "lens": [("popup", 0.0, 0.15)], "outline": [("cutout", 0.0, 0.18)],
               "spotlight": [("thump", 0.0, 0.16)], "freeze": [("flash", 0.0, 0.2), ("thump", 0.05, 0.14)],
-              "whip": [("dwhoosh", 0.0, 0.22)]}
+              "whip": [("dwhoosh", 0.0, 0.22)], "glitch": [("flicker", 0.0, 0.2)], "leak": [("flash", 0.05, 0.14)],
+              "zoomthru": [("dwhoosh", 0.0, 0.2), ("thump", 0.25, 0.14)], "impact": [("thump", 0.0, 0.24)],
+              "dramatic": [("vine_boom", 0.0, 0.22)], "dolly": [("charge", -0.3, 0.12)], "clone": [("popup", 0.0, 0.16)],
+              "neon": [("data", 0.0, 0.12)], "facecam": [("popup", 0.0, 0.14)], "colorize": [("flash", 0.3, 0.12)]}
 VIRAL_FX = {"vhs": [("flicker", 0.0, 0.2)], "film": [("flash", 0.0, 0.12)], "bw": [("flash", 0.0, 0.12)]}
 
 
@@ -199,6 +207,15 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
         tt = at + 0.35 + n * float(st)
         out = [(f("keyboard", "data"), at + 0.15, 0.12), (f("kaching", "vclick"), tt, 0.18)]
         return out + ([(f("hit", "thump"), tt + 0.45, 0.18)] if props.get("stamp") else [])
+    if comp == "Countdown":
+        n, at = int(props.get("from", 3)), float(props.get("at", 0))
+        step = max(0.4, (dur - at - 0.35) / n)
+        return [(f("ding", "vclick"), at + i * step, 0.14) for i in range(n)]
+    if comp == "EvidenceBoard":
+        L = props.get("items") or [1, 2, 3]
+        span = max(0.3, (dur - 1.2) / (len(L) + 1))
+        return [(f("camera", "flash"), float((it.get("at") if isinstance(it, dict) else None) or 0.25 + i * span), 0.14)
+                for i, it in enumerate(L[:6])]
     if comp == "MapPin":
         at, fly = float(props.get("at", 0)), float(props.get("fly", 1.1))
         return [(f("whoosh", "dwhoosh"), at, 0.16), (f("pop", "popup"), at + fly - 0.05, 0.18), (f("ding", "popup"), at + fly + 0.3, 0.12)]

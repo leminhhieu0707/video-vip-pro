@@ -1,6 +1,6 @@
 # 🎬 Video VIP Pro: skill edit video cho Claude Code
 
-Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 60 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
+Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 75 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
 
 - **Mọi ngành:** bán hàng, điện thoại, bất động sản, spa/làm đẹp, ăn uống, giáo dục/khoá học, tài chính, gym, du lịch, ô tô, thời trang, tin tức, vlog.
 - **Màu chủ đạo theo ý bạn:** có sẵn 12 bộ màu (xanh, cam, đỏ, vàng kim, đen vàng, xanh lá, hồng, tím, ngọc, da trời, nâu, đen), hoặc bất kỳ mã màu nào. Cả video đổi màu theo, kể cả hiệu ứng chuyển động.
@@ -16,7 +16,9 @@
 - rung;
 - speed ramp nhanh – chậm – nhanh cho B-roll (có nhoè chuyển động);
 - whip pan (lia nhoè sang cảnh mới);
-- cuối video nối vào đầu để lặp mượt.
+- cuối video nối vào đầu để lặp mượt;
+- dolly zoom (phòng lao tới, người đứng yên);
+- chuyển cảnh glitch, loé sáng phim, zoom xuyên cảnh.
 
 **Tách người khỏi nền:**
 - chữ khổng lồ nấp sau đầu;
@@ -27,7 +29,11 @@
 - kính lúp;
 - vòng chữ quay quanh người;
 - dừng hình giới thiệu nhân vật (viền trắng kiểu sticker + thẻ tên);
-- đèn sân khấu (phòng tối, người sáng).
+- đèn sân khấu (phòng tối, người sáng);
+- viền neon quanh người;
+- nhân bản người;
+- khung tròn mặt khi chiếu B-roll;
+- khung truyện tranh (impact frame), zoom kịch tính kiểu meme.
 
 **Chữ:**
 - phụ đề 2 tầng hiện mờ dần;
@@ -41,7 +47,14 @@
 - đếm số chạy;
 - gạch giá cũ, bật giá mới;
 - hoá đơn in ra từng dòng;
-- bản đồ bay tới địa điểm + ghim rơi.
+- bản đồ bay tới địa điểm + ghim rơi;
+- chữ giải mã, đồng hồ đếm ngược, sóng âm theo giọng;
+- bảng điều tra dây đỏ, ảnh đen trắng tô màu dần, ảnh tĩnh 3D.
+
+**Studio Look (phòng thường thành phòng quay xịn):**
+- tự đồng bộ màu và độ sáng giữa các đoạn;
+- đánh đèn giả: 4 kiểu sáng sang, ấm cà phê, cine tối, ánh cửa sổ;
+- thêm cây xanh, đèn cây, kệ sách, bình hoa nằm sau lưng người nói.
 
 **Giao diện:**
 - cuộc gọi đến;

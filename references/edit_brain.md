@@ -24,7 +24,9 @@ The worst VIP edit is the same sequence on every video: hook zoom → frost → 
 | **Cinematic Story** | food, travel, hospitality, brand films | TitleCard chapters, Polaroids, SplitFlap places, film / warm looks, InkSpread into one big number, hero speed ramps, MapPin | slow push / pull on every shot, cut on the beat | music-led; whoosh on chapter changes; sparkle on the dish or hero moment |
 | **Data Explainer** | statistics, comparisons, results | BarChartRace, LineGraph, CountUp, VsCards, ExplodedStack | static | ding on numbers, riser into the key stat |
 
-**TREND pack quick picks (11/2026):** character intro = `freeze` with `name` on the first pause; the key promise = `spotlight`; price drop = `PriceSlash`; "how the money adds up" = `Receipt`; address / location = `MapPin`; B-roll energy = `"ramp"` + `"transition": "whip"`; short-form ending = `loopback`. Use one or two per video, not all of them.
+**TREND pack quick picks (11/2026):** character intro = `freeze` with `name` on the first pause; the key promise = `spotlight`; price drop = `PriceSlash`; "how the money adds up" = `Receipt`; address / location = `MapPin`; B-roll energy = `"ramp"` + `"transition": "whip"`; short-form ending = `loopback`. Pack 2: AI / tech = `neon`, `DecodeText`, `glitch`; "3 kiểu người" = `clone`; shock line = `dolly`; punchline / roast = `impact` or `dramatic` (comedy only); B-roll with the speaker still visible = `facecam`; before a reveal = `Countdown`; archive photos = `colorize` + `"parallax"`; investigations = `EvidenceBoard`; podcast quotes = `Audiogram`; chapter changes = `leak` / `zoomthru`. Use one or two per video, not all of them.
+
+**Studio Look:** when the room looks flat, dim or empty, add `"color_match": true`, one `relight` preset that suits the brand (shop / luxury → `bright_luxe`, café / F&B / lifestyle → `warm_cafe`, story / drama channels → `cine_dark`, education / spa → `soft_window`) and one or two props in empty corners. Keep the speaker's skin natural; check a still before the full render.
 
 ## 3. Variety rules (check before rendering)
 - **Repetition:**

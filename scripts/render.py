@@ -188,6 +188,75 @@ def ramp_map(spec, src_len: float, steps: int = 24) -> tuple[str, float, list[tu
     return expr, acc, fast
 
 
+# ------------------------------------------------------------------ STUDIO LOOK: colour match between clips
+TREND_TX = {"whip": 0.36, "glitch": 0.24, "leak": 0.7, "zoomthru": 0.5}
+
+
+def _seg_stats(f: Path) -> dict | None:
+    """Exposure / colour stats of a rendered segment (6 frames, 120x214)."""
+    import subprocess
+    import numpy as np
+    d = video_duration(f)
+    w, h = 120, 214
+    fr = []
+    for k in range(6):
+        t = d * (k + 0.5) / 6
+        r = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{t:.3f}", "-i", str(f), "-frames:v", "1", "-vf", f"scale={w}:{h}",
+                            "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
+        if len(r.stdout) == w * h * 3:
+            fr.append(np.frombuffer(r.stdout, np.uint8).reshape(h, w, 3))
+    if not fr:
+        return None
+    a = np.stack(fr).reshape(-1, 3).astype(np.float32) / 255
+    y = a @ np.array([0.299, 0.587, 0.114], np.float32)
+    mid = a[(y > 0.12) & (y < 0.9)]
+    mean = (mid if len(mid) > 100 else a).mean(0)
+    sat = float((a.max(1) - a.min(1)).mean())
+    return {"med": float(np.median(y)), "p95": float(np.percentile(y, 95)), "mean": mean.tolist(), "sat": sat}
+
+
+def color_match_chain(plan: dict, clips: list[dict], starts: list[float], total: float) -> str:
+    """"color_match": true | {"ref": 0, "strength": 0.7, "brighten": true} -> per-clip eq + white balance (timeline
+    enable windows) so every shot matches the reference shot's exposure, white balance and saturation. Gentle by default."""
+    import math
+    cm = plan.get("color_match")
+    if not cm:
+        return ""
+    o = cm if isinstance(cm, dict) else {}
+    st = float(o.get("strength", 0.7))
+    stats = [_seg_stats(c["_seg"]) for c in clips]
+    if "ref" in o:
+        ref = int(o["ref"])
+    else:  # the longest clip that has sound (the main talking shot)
+        ref = max(range(len(clips)), key=lambda i: (clips[i].get("volume", 1) != 0 and not clips[i].get("mute") and not clips[i].get("ramp"),
+                                                    clips[i]["_dur"]))
+    R = stats[ref]
+    if not R:
+        return ""
+    target = R["med"]
+    if o.get("brighten", True) and target < 0.4:  # a dim reference room: lift everything toward a brighter mid-tone
+        target = target + (0.44 - target) * 0.6
+    rg = sum(R["mean"]) / 3
+    out = []
+    for i, (c, S) in enumerate(zip(clips, stats)):
+        if not S:
+            continue
+        a, b = starts[i], starts[i] + c["_dur"]
+        g = math.log(max(0.05, target)) / math.log(min(0.95, max(0.05, S["med"])))
+        g = 1 + (min(1.35, max(0.75, 1 / g)) - 1) * st  # eq gamma > 1 brightens
+        sg = sum(S["mean"]) / 3
+        wb = [min(1.12, max(0.88, (R["mean"][j] / rg) / max(1e-3, S["mean"][j] / sg))) for j in range(3)]
+        wb = [1 + (w - 1) * st for w in wb]
+        sat = 1 + (min(1.2, max(0.85, R["sat"] / max(1e-3, S["sat"]))) - 1) * st
+        if abs(g - 1) < 0.015 and max(abs(w - 1) for w in wb) < 0.01 and abs(sat - 1) < 0.02:
+            continue
+        en = f"enable='between(t,{a:.3f},{b:.3f})'"
+        out.append(f"colorchannelmixer=rr={wb[0]:.4f}:gg={wb[1]:.4f}:bb={wb[2]:.4f}:{en}")
+        out.append(f"eq=gamma={g:.4f}:saturation={sat:.4f}:{en}")
+        print(f"[render] color match clip {i}: gamma {g:.3f}, wb {[round(w, 3) for w in wb]}, sat {sat:.3f}")
+    return ",".join(out)
+
+
 def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -> dict:
     W, H, fps = canvas["width"], canvas["height"], canvas["fps"]
     src = Path(c["src"])
@@ -347,7 +416,7 @@ def keep_timing(clips: list[dict]) -> None:
         t = clips[i].get("transition")
         if isinstance(t, str):
             t = {"type": t}
-        if not t or t.get("type", "cut") in ("cut", "whip"):
+        if not t or t.get("type", "cut") == "cut" or t.get("type") in TREND_TX:
             continue
         d = float(t.get("duration", 0.4))
         prev, cur = clips[i - 1], clips[i]
@@ -371,7 +440,7 @@ def join_segments(clips: list[dict], work: Path, vcodec: list[str], fps: int = 3
         t = c.get("transition") if i > 0 else None
         if isinstance(t, str):
             t = {"type": t}
-        if t and t.get("type", "cut") not in ("cut", "whip"):
+        if t and t.get("type", "cut") != "cut" and t.get("type") not in TREND_TX:
             d = min(float(t.get("duration", 0.4)), clips[i - 1]["_dur"] / 2, c["_dur"] / 2)
             ttype = t["type"] if t["type"] in XFADES else "fade"
             trans.append((ttype, d))
@@ -708,6 +777,21 @@ def resolve_stills(v, work: Path, width: int = 1080):
     return v
 
 
+def audio_levels(base: Path, s: float, e: float, fps: int) -> list[float]:
+    """Per-frame loudness 0..1 of the edit's voice for [s, e] (drives the Audiogram bars)."""
+    import subprocess
+    import numpy as np
+    sr = 16000
+    r = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{s:.3f}", "-t", f"{e - s:.3f}", "-i", str(base), "-ac", "1", "-ar", str(sr),
+                        "-f", "s16le", "-"], capture_output=True)
+    a = np.frombuffer(r.stdout, np.int16).astype(np.float32) / 32768
+    hop = sr // fps
+    n = max(1, len(a) // hop)
+    rms = np.sqrt(np.array([np.mean(a[i * hop:(i + 1) * hop] ** 2) + 1e-9 for i in range(n)]))
+    db = np.clip((20 * np.log10(rms) + 50) / 40, 0, 1)
+    return [round(float(x), 3) for x in db]
+
+
 def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, work: Path, root: Path) -> None:
     """Render every "motion" overlay (Remotion, Blue pack) to a cached transparent .mov and turn it into a
     full-frame "video" overlay for the final pass."""
@@ -726,6 +810,9 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
         return
     for o in items:
         o["props"] = resolve_stills(o.get("props", {}), work, canvas["width"])
+        if o.get("comp") == "Audiogram" and not o["props"].get("levels"):
+            s, e = overlay_times(o, starts, total)
+            o["props"]["levels"] = audio_levels(work / "base.mp4", s, e, int(canvas.get("fps", 30)))
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "motion"))
     import render_motion  # noqa: E402
     from concurrent.futures import ThreadPoolExecutor
@@ -756,7 +843,8 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
     # concat-joined segments can carry tiny timestamp steps at each join; overlays treat those as the end of
     # their stream and vanish, so give the base clean, continuous timestamps first
     fps_c = canvas.get("fps", 30)
-    fc.append(f"[0:v]fps={fps_c},setpts=N/{fps_c}/TB[basev]")
+    cm = plan.get("_cm_chain")
+    fc.append(f"[0:v]fps={fps_c},setpts=N/{fps_c}/TB{',' + cm if cm else ''}[basev]")
     vlast = "[basev]"
 
     # image / video overlays (logos, stickers, picture-in-picture, green-screen effects)
@@ -895,7 +983,7 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
         # guard: the export once kept only 13 of 45 effect sounds while the editor played them all — say it loudly
         fxn = sum(1 for o in plan.get("overlays", []) or []
                   if ((o.get("_motion") or o.get("comp")) not in (None, "BlueText")
-                      or o.get("type") in ("freeze", "spotlight", "whip")) and "sfx" not in o)
+                      or o.get("type") in __import__("sound").TYPE_MAP) and "sfx" not in o)
         print(f"[render] tiếng hiệu ứng: {len(hits)} tiếng cho {fxn} hiệu ứng", flush=True)
         if fxn and len(hits) < fxn * 0.6:
             print("[render] CẢNH BÁO: số tiếng ít hơn hẳn số hiệu ứng — kiểm tra sound.design / sfx_events trước khi giao",
@@ -948,18 +1036,29 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
 # ------------------------------------------------------------------ main
 
 def trend_layers(plan: dict, clips: list[dict], starts: list[float], total: float) -> None:
-    """TREND pack glue: clip "transition": "whip" -> a whip layer over the hard cut (drawn first, under everything);
+    """TREND pack glue: clip "transition": "whip" | "glitch" | "leak" | "zoomthru" -> a layer over the hard cut (drawn
+    first, under everything);
     a "freeze" overlay with "name" -> a NameTag motion card right above it."""
     ovs = plan.setdefault("overlays", [])
     whips = []
     for i in range(1, len(clips)):
         t = clips[i].get("transition")
         t = {"type": t} if isinstance(t, str) else (t or {})
-        if t.get("type") == "whip":
-            d = min(float(t.get("duration", 0.36)), clips[i - 1]["_dur"], clips[i]["_dur"])
-            whips.append({"type": "whip", "start": max(0, starts[i] - d / 2), "end": min(total, starts[i] + d / 2),
-                          "_at": starts[i], "dir": t.get("dir", "left"), "amount": t.get("amount", 0.6)})
+        if t.get("type") in TREND_TX:
+            d = min(float(t.get("duration", TREND_TX[t["type"]])), clips[i - 1]["_dur"], clips[i]["_dur"])
+            lay = {k2: v for k2, v in t.items() if k2 not in ("type", "duration")}
+            whips.append({"type": t["type"], "start": max(0, starts[i] - d / 2), "end": min(total, starts[i] + d / 2),
+                          "_at": starts[i], "dir": t.get("dir", "left"), **lay})
     ovs[:0] = whips
+    # props sit in the room, so the relight grade must come after them (it then lights the plant / lamp too)
+    rel = [o for o in ovs if o.get("type") == "relight"]
+    if rel:
+        last_prop = max((i for i, o in enumerate(ovs) if o.get("type") == "prop"), default=-1)
+        first_rel = min(i for i, o in enumerate(ovs) if o.get("type") == "relight")
+        if last_prop > first_rel:
+            rest = [o for o in ovs if o.get("type") != "relight"]
+            j = max(i for i, o in enumerate(rest) if o.get("type") == "prop") + 1
+            ovs[:] = rest[:j] + rel + rest[j:]
     for j in range(len(ovs) - 1, -1, -1):
         o = ovs[j]
         if o.get("type") == "freeze" and o.get("name"):
@@ -1034,6 +1133,13 @@ def main():
     plan["_root"] = str(root)
     clips = plan["clips"]
     for i, c in enumerate(clips):
+        if c.get("parallax") and Path(c["src"]).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".bmp"):
+            import parallax
+            pdur = parse_time(c.get("duration", 3))
+            mp4 = parallax.make(c["src"], pdur, cv["width"], cv["height"], int(cv["fps"]), work, c["parallax"])
+            if mp4:
+                c.update({"src": str(mp4), "in": 0, "out": pdur, "zoom": "none", "mute": True, "fit": "fill"})
+                c.pop("duration", None)
         make_segment(c, i, cv, work, seg_codec)
         print(f"[render] segment {i + 1}/{len(clips)} {Path(c['src']).name} {c['_dur']:.2f}s")
     base, starts, total = join_segments(clips, work, seg_codec, int(cv["fps"]))
@@ -1047,6 +1153,7 @@ def main():
         print(f"[render] base only -> {base}")
         return
     trend_layers(plan, clips, starts, total)
+    plan["_cm_chain"] = color_match_chain(plan, clips, starts, total)
     prepare_motion(plan, starts, total, cv, work, root)
     ass = build_ass(plan, cv["width"], cv["height"], clips, starts, total, work)
     preview = tuple(map(float, a.preview.split("-"))) if a.preview else None

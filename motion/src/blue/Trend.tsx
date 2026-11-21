@@ -195,4 +195,115 @@ export const MapPin: React.FC<P> = ({duration, place = 'Địa điểm', sub = '
   </AbsoluteFill>;
 };
 
-export const TREND_COMPS: Record<string, React.FC<any>> = {NameTag, PriceSlash, Receipt, MapPin};
+/** DecodeText: characters scramble through random glyphs and lock in left to right (hacker / AI reveal). */
+export const DecodeText: React.FC<P> = ({duration, text = 'SỰ THẬT LÀ...', x = 0.5, y = 0.16, size = 104, at = 0.05, cps = 22, color = '#FFFFFF', accent = T('#8EB3FF'), box = true}) => {
+  const {frame, fps, t, W} = useT();
+  const o = exit(frame, fps, duration);
+  const chars = Array.from(String(text));
+  size = Math.min(size, (W * 0.84) / Math.max(1, chars.length * 0.68 + (box ? 0.6 : 0)));
+  const glyph = 'ABCDEFGHKMNPQRSTUVWXYZ0123456789#$%&@*+=<>/ĐƯƠÂ';
+  const done = (t - at) * cps;
+  return <At x={x} y={y} style={{opacity: o * lerp(t, at - 0.05, at + 0.1)}}>
+    <div style={{fontFamily: SANS, fontWeight: 800, fontSize: size, lineHeight: 1.1, whiteSpace: 'pre', letterSpacing: '0.04em', color,
+      padding: box ? `${size * 0.12}px ${size * 0.3}px` : 0, background: box ? T('rgba(10,16,40,0.72)') : undefined, borderRadius: size * 0.16,
+      border: box ? T('2px solid rgba(142,179,255,0.45)') : undefined, textShadow: '0 3px 14px rgba(0,0,0,0.5)', fontVariantNumeric: 'tabular-nums'}}>
+      {chars.map((ch, i) => {
+        const locked = done > i + 3 || ch === ' ';
+        const g = locked ? ch : glyph[Math.floor(rnd(i * 31 + Math.floor(frame / 2)) * glyph.length)];
+        return <span key={i} style={{color: locked ? color : accent, opacity: done > i - 4 ? 1 : 0}}>{g}</span>;
+      })}
+    </div>
+  </At>;
+};
+
+/** Countdown: label + big 3-2-1 that punches in each step with a ring draining around it. */
+export const Countdown: React.FC<P> = ({duration, from = 3, label = 'ĐỢI ĐÃ...', x = 0.5, y = 0.2, size = 220, at = 0, color = T('#3158FF')}) => {
+  const {frame, fps, t, H} = useT();
+  const o = exit(frame, fps, duration);
+  const step = Math.max(0.4, (duration - at - 0.35) / from);
+  const k = Math.min(from - 1, Math.max(0, Math.floor((t - at) / step)));
+  const f = Math.max(0, Math.min(1, (t - at - k * step) / step));
+  const s = pop(frame, fps, at + k * step, 9);
+  const R = size * 0.62, C2 = 2 * Math.PI * R;
+  return <AbsoluteFill style={{opacity: o * lerp(t, at, at + 0.15)}}>
+    {label ? <At x={x} y={y - (R + size * 0.3) / H}><div style={{fontFamily: SANS, fontWeight: 800, fontSize: size * 0.22, letterSpacing: '0.18em', color: '#fff',
+      textShadow: '0 3px 14px rgba(0,0,0,0.6)', whiteSpace: 'nowrap'}}>{label}</div></At> : null}
+    <At x={x} y={y}>
+      <div style={{position: 'relative', width: R * 2 + 30, height: R * 2 + 30, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <svg width={R * 2 + 30} height={R * 2 + 30} style={{position: 'absolute', inset: 0, transform: 'rotate(-90deg)'}}>
+          <circle cx={R + 15} cy={R + 15} r={R} fill={T('rgba(10,16,40,0.55)')} stroke="rgba(255,255,255,0.18)" strokeWidth={14} />
+          <circle cx={R + 15} cy={R + 15} r={R} fill="none" stroke={color} strokeWidth={14} strokeLinecap="round" strokeDasharray={C2} strokeDashoffset={C2 * f} />
+        </svg>
+        <div style={{position: 'relative', fontFamily: SANS, fontWeight: 800, fontSize: size, color: '#fff', lineHeight: 1, transform: `scale(${interpolate(s, [0, 1], [1.8, 1])})`,
+          opacity: Math.min(1, s * 1.5), textShadow: '0 6px 26px rgba(0,0,0,0.5)'}}>{from - k}</div>
+      </div>
+    </At>
+  </AbsoluteFill>;
+};
+
+/** EvidenceBoard: cork board fills the frame; photos / clippings get pinned one by one and red strings connect them.
+ *  {items: [{src, label, x, y, at?}], links: [[0, 1], [1, 2]], title} — x/y are 0–1 on the board (defaults spread). */
+export const EvidenceBoard: React.FC<P> = ({duration, items = [], links, title = '', bg = '#6B4A2E', w = 300}) => {
+  const {frame, fps, t, W, H} = useT();
+  const o = exit(frame, fps, duration) * lerp(t, 0, 0.25);
+  const L: any[] = items.length ? items : [{label: 'A'}, {label: 'B'}, {label: 'C'}];
+  const pos = (i: number) => {
+    const it: any = L[i];
+    const dflt = [[0.28, 0.26], [0.72, 0.32], [0.32, 0.56], [0.7, 0.64], [0.5, 0.44], [0.27, 0.84], [0.73, 0.88]][i % 7];
+    return [it.x ?? dflt[0], it.y ?? dflt[1]] as [number, number];
+  };
+  const span = Math.max(0.3, (duration - 1.2) / (L.length + 1));
+  const atOf = (i: number) => (L[i] as any).at ?? 0.25 + i * span;
+  const lk: number[][] = links ?? L.slice(1).map((_, i) => [i, i + 1]);
+  const cam = interpolate(t, [0, duration], [1.0, 1.06], CL);
+  const pinY = (i: number) => pos(i)[1] * H - w * 0.5;
+  return <AbsoluteFill style={{opacity: o, background: `radial-gradient(circle at 50% 40%, ${bg}, #2E1E12 95%)`, transform: `scale(${cam})`}}>
+    <AbsoluteFill style={{opacity: 0.25, backgroundImage: 'radial-gradient(rgba(0,0,0,0.5) 1.5px, transparent 1.6px)', backgroundSize: '9px 9px'}} />
+    {L.map((it: any, i) => {
+      const s = pop(frame, fps, atOf(i), 11);
+      if (t < atOf(i)) return null;
+      const [px, py] = pos(i);
+      const rot = (rnd(i + 3) - 0.5) * 12;
+      return <div key={i} style={{position: 'absolute', left: px * W, top: py * H, width: w, transform: `translate(-50%,-50%) rotate(${rot}deg) scale(${interpolate(s, [0, 1], [1.4, 1])})`,
+        opacity: Math.min(1, s * 1.4), background: '#F7F3EA', padding: 12, paddingBottom: it.label ? 8 : 12, boxShadow: '0 14px 26px rgba(0,0,0,0.45)'}}>
+        <div style={{width: '100%', height: w * 0.78, overflow: 'hidden', background: '#d8d2c4'}}>{it.src ? <Photo s={it.src} /> : null}</div>
+        {it.label ? <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 30, color: '#1E1E1E', textAlign: 'center', marginTop: 6, lineHeight: 1.15}}>{it.label}</div> : null}
+      </div>;
+    })}
+    <svg width={W} height={H} style={{position: 'absolute', inset: 0}}>
+      {lk.map(([a, b], j) => {
+        const ta = Math.max(atOf(a), atOf(b)) + 0.25;
+        const p = lerp(t, ta, ta + 0.45, 0, 1);
+        if (p <= 0) return null;
+        const X1 = pos(a)[0] * W, Y1 = pinY(a), X2 = X1 + (pos(b)[0] * W - X1) * p, Y2 = Y1 + (pinY(b) - Y1) * p;
+        return <line key={j} x1={X1} y1={Y1} x2={X2} y2={Y2} stroke="#D7262E" strokeWidth={6} strokeLinecap="round" />;
+      })}
+      {L.map((_, i) => t >= atOf(i) ? <circle key={'p' + i} cx={pos(i)[0] * W} cy={pinY(i)} r={15} fill="#C4161F" stroke="#7A0A10" strokeWidth={3} /> : null)}
+    </svg>
+    {title ? <At x={0.5} y={0.07}><div style={{fontFamily: SANS, fontWeight: 800, fontSize: 64, color: '#fff', background: '#B5121B', padding: '8px 26px',
+      transform: `rotate(-2deg) scale(${pop(frame, fps, 0.1, 11)})`, boxShadow: '0 10px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap'}}>{title}</div></At> : null}
+  </AbsoluteFill>;
+};
+
+/** Audiogram: bars that move with the real voice (render.py fills `levels` from the edit's audio), in a glass pill. */
+export const Audiogram: React.FC<P> = ({duration, levels = [], x = 0.5, y = 0.8, w = 0.62, h = 0.07, bars = 34, label = '', color = T('#8EB3FF')}) => {
+  const {frame, fps, t, W, H} = useT();
+  const o = exit(frame, fps, duration) * lerp(t, 0, 0.25);
+  const lv = (k: number) => (levels.length ? levels[Math.max(0, Math.min(levels.length - 1, frame - k))] : 0.3 + 0.3 * Math.abs(Math.sin(t * 7 + k)));
+  const bw = (w * W) / bars;
+  return <At x={x} y={y} style={{opacity: o}}>
+    <div style={{display: 'flex', alignItems: 'center', gap: 22, padding: '18px 30px', borderRadius: 999, background: T('rgba(10,16,40,0.6)'),
+      border: T('1.5px solid rgba(142,179,255,0.35)'), boxShadow: SHADOW_CARD}}>
+      {label ? <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', whiteSpace: 'nowrap'}}>{label}</div> : null}
+      <div style={{display: 'flex', alignItems: 'center', height: h * H, gap: bw * 0.3}}>
+        {Array.from({length: bars}).map((_, i) => {
+          const d = Math.abs(i - (bars - 1) / 2) / (bars / 2);
+          const v = lv(Math.round(d * 6)) * (1 - d * 0.55) * (0.75 + 0.5 * rnd(i + Math.floor(frame / 3)));
+          return <div key={i} style={{width: bw * 0.7, height: Math.max(6, v * h * H), borderRadius: 99, background: color, boxShadow: T('0 0 12px rgba(60,100,255,0.6)')}} />;
+        })}
+      </div>
+    </div>
+  </At>;
+};
+
+export const TREND_COMPS: Record<string, React.FC<any>> = {NameTag, PriceSlash, Receipt, MapPin, DecodeText, Countdown, EvidenceBoard, Audiogram};

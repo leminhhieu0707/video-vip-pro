@@ -27,7 +27,7 @@ NODE = os.environ.get("MH_NODE") or shutil.which("node") or "node"
 CACHE_ROOT = Path(os.environ["MH_MOTION_CACHE"]) if os.environ.get("MH_MOTION_CACHE") else HERE
 PUBLIC_IN = HERE / "public" / "_in"
 IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"}
-COMPS = {"NameTag", "PriceSlash", "Receipt", "MapPin",  # TREND pack (src/blue/Trend.tsx)
+COMPS = {"NameTag", "PriceSlash", "Receipt", "MapPin", "DecodeText", "Countdown", "EvidenceBoard", "Audiogram",  # TREND pack (src/blue/Trend.tsx)
          "BlueText", "BlueBig", "Tiles", "Checklist", "ScreenCard", "NumberTitle", "FollowCard",
          # Blue VIP (src/blue/Vip.tsx)
          "Stamp", "KineticTitle", "GravityText", "GiantCaption", "SplitFlap", "Highlighter", "CircleDraw", "Cursor",

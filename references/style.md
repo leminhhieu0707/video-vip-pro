@@ -267,6 +267,51 @@ Sounds follow the props automatically (strike swipe, slam hit + kaching, printer
 
 **Sound pairings:** freeze `camera` + `hit`, spotlight low `boom`, whip `whoosh` (viral style: flash / thump / dwhoosh).
 
+## TREND pack 2 (the rest of the 11/2026 list)
+
+**Person / frame layers (vipfx)** — faces and the speaker are found automatically (YuNet face detector + matte); pass `at` / `face` only to override.
+| overlay | what it does |
+|---|---|
+| `{"type":"neon","color":"#FF3FD8","cycle":true}` | Glowing neon tube traced around the speaker; `cycle` rotates the hue, `glow` 26, `width` 7, `boil` 0. AI / tech / night looks. |
+| `{"type":"clone","copies":[{"dx":-0.3,"scale":0.8,"flip":true},{"dx":0.3,"scale":0.8,"flip":true,"at":0.12}]}` | Copies of the speaker pop in beside them ("tôi 3 năm trước / bây giờ", "3 kiểu khách"). Copies are placed relative to where the speaker stands; a copy with no room on its side moves further out on the other side, smaller. |
+| `{"type":"dolly","zoom":1.4}` | Vertigo shot: the room (person inpainted out) pushes in behind a speaker who stays the same size. 1–2 s on a shock line. `mode: "out"` reverses it. |
+| `{"type":"facecam","pos":[0.76,0.78],"size":0.36}` | Round face bubble with a white ring over B-roll (put it after the B-roll overlay). Frames the detected face; `from` takes the face from another timeline second (when the B-roll is a clip, not an overlay). |
+| `{"type":"impact"}` (0.3–0.4 s) | Anime impact frame: ink black-and-white, flashing negative every 2 frames, speed lines from the face, shake. Punchlines, roasts. |
+| `{"type":"dramatic","zoom":1.7}` (~1.2 s) | Meme snap zoom on the face + red vignette + shake, with the `vine_boom` sound. Comedy only. |
+| `{"type":"colorize","mode":"fade" \| "wipe","hold":0.4}` | Old black-and-white (sepia, grain) turning into colour. Archive photos, "ngày xưa ↔ bây giờ". |
+
+**Transitions** (clip `"transition"`, a hard cut + a layer, no overlap, auto sound): `"glitch"` (0.24 s RGB split + slice shifts + noise), `"leak"` (0.7 s warm film light leak + soft flash; `{"type":"leak","color":"cool"|"gold"}`), `"zoomthru"` (0.5 s: zoom into the frame and land zoomed-out on the next shot; `"focus":[x,y]`), plus `"whip"`.
+
+**Image clips:** `"parallax": true` (or `{"amount":1.2,"dir":"left"|"right"|"in"}`) turns a still photo into a 2.5D "3D photo": subject cut out, background inpainted, the two layers drift at different speeds. Falls back to the normal Ken Burns when the photo has no clear subject.
+
+**Motion comps (`Trend.tsx`)**
+| comp | props | use |
+|---|---|---|
+| `DecodeText` | `text`, `size` (auto-fits the width), `cps` 22, `box` | Letters scramble and lock in left to right. AI / tech / reveal. |
+| `Countdown` | `from` 3, `label` "ĐỢI ĐÃ...", `y` | Big 3-2-1 punching in with a draining ring, a tick per number. Before a reveal. |
+| `EvidenceBoard` | `items: [{src, label, x, y, at}]`, `links: [[0,1],…]`, `title` | Full-screen cork board: photos pinned one by one, red strings connect them. HST / Dam Case / news. |
+| `Audiogram` | `label`, `y` 0.8, `bars` 34 | Bars that move with the real voice (render fills `levels` from the edit's audio). Podcast / quote clips. |
+
+**Already there:** the progress bar is the ASS overlay `{"type":"progress","color":"#E11D2E"}` (fills over its range; give it the whole video).
+
+## STUDIO LOOK (make a plain room look professionally lit)
+
+Three parts that work together; use them on talking-head footage shot in a flat or dim room.
+
+1. **Colour match between clips** (plan level): `"color_match": true` or `{"ref": 0, "strength": 0.7, "brighten": true}`. Every clip is measured (exposure, white balance, saturation) and matched to the reference clip (default: the longest clip with sound); a dim reference is lifted a little. Gentle by default — Hiếu dislikes heavy grading, so keep `strength` ≤ 0.8. The render log prints each clip's correction.
+2. **Fake lighting**: `{"type":"relight","preset":"warm_cafe","side":"left"}` (no times = whole video; or `clip` + `start`/`end` per shot).
+   | preset | look |
+   |---|---|
+   | `bright_luxe` | clean, bright showroom; white rim, soft bloom |
+   | `warm_cafe` | room a bit darker and warmer, two warm lamp glows on the wall, orange rim |
+   | `cine_dark` | dark, cool shadows, warm key, blue rim, strong vignette |
+   | `soft_window` | daylight from one side, airy |
+
+   What it does: grades the room, adds practical lamp glows (`lamps: [[x, y, r], …]`, `lamp_color`), brightens the lit side of the face with a colour-temperatured key (`side`, auto face; texture kept), adds a rim light along the far edge of the speaker, and a luma-only bloom. `strength` 0–1.5 scales everything. Costs one person-matte pass for its range (~1 s per 30 frames).
+3. **Props behind the speaker**: `{"type":"prop","src":"plant","pos":[0.13,0.66],"width":0.34}` — `pos` is the bottom-centre of the object (put it on the floor / counter line), `width` a fraction of the frame. Built-ins in `assets/props/`: `plant` (monstera, white pot), `plant_tall` (fiddle-leaf fig, rattan basket), `lamp` (floor lamp, adds a warm wall glow), `shelf` (wall shelf with books), `vase` (table flowers). Any cut-out PNG works (`"src": "my.png"`). Each prop is colour-matched to the room, gets a soft contact shadow, `flip`, and stays behind the speaker (`"behind": false` puts it in front). Render orders props before `relight`, so the lighting falls on them too. Tripod shots only (the prop does not track camera moves).
+
+Typical studio recipe: `color_match` + `relight warm_cafe` + one plant on the side the speaker is not facing + one lamp on the other side.
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.
@@ -278,5 +323,5 @@ Sounds follow the props automatically (strike swipe, slam hit + kaching, printer
 - **Adding a comp:** write it with colours wrapped in `T('…')`, then register the name in `Root.tsx`, in `COMPS` in `render_motion.py`, and in `MOTION_COMPS` in `editor/app.js`.
 - **VIP Editor preview limits:**
   - It previews motion comps.
-  - `bg` / `popout` / `lens` / `fx` / `freeze` / `spotlight` / `loopback`, whip transitions and `behind` only appear in "Xuất nháp".
+  - `bg` / `popout` / `lens` / `fx` / `freeze` / `spotlight` / `loopback` / `neon` / `clone` / `dolly` / `facecam` / `impact` / `dramatic` / `colorize` / `relight` / `prop`, colour match, parallax, the trend transitions and `behind` only appear in "Xuất nháp".
   - Frost tints in the preview stay blue; the export uses the theme.

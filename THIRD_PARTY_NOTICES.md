@@ -13,3 +13,7 @@
 | FFmpeg (installed separately) | everywhere | LGPL/GPL depending on build |
 
 Sound effects in `assets/sfx/` are synthesized by `scripts/make_sfx.py` (no samples) and are part of this project (MIT).
+
+## Decor props (assets/props)
+
+`plant`, `plant_tall`, `lamp`, `shelf`, `vase` were generated for this project with an image model (Nano Banana 2) and cut out with rembg. No third-party photos are included.
