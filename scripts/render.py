@@ -149,12 +149,52 @@ VOICE_ENHANCE = ("equalizer=f=250:t=q:w=1.2:g=-2.5,equalizer=f=3200:t=q:w=1:g=3,
                  "acompressor=threshold=0.08:ratio=3:attack=5:release=120:makeup=2,deesser=i=0.4")
 
 
+# speed ramps (velocity edits) for B-roll: [source fraction, speed] keypoints, speed eased between them
+RAMPS = {
+    "velocity": [(0, 2.6), (0.3, 2.6), (0.42, 0.35), (0.7, 0.35), (0.82, 2.6), (1, 2.6)],  # fast - slow - fast
+    "hero": [(0, 1.0), (0.3, 1.0), (0.4, 0.3), (0.78, 0.3), (0.88, 1.8), (1, 1.8)],         # normal - slow-mo - out
+    "rush_in": [(0, 3.0), (0.35, 3.0), (0.5, 0.45), (1, 0.45)],                               # rush in, land slow
+    "slowmo_end": [(0, 1.0), (0.55, 1.0), (0.68, 0.35), (1, 0.35)],                           # ends in slow motion
+}
+
+
+def ramp_map(spec, src_len: float, steps: int = 24) -> tuple[str, float, list[tuple[float, float]]]:
+    """setpts expression (source t -> output t), output length, and the output windows that run fast (>1.6x)."""
+    pts = RAMPS.get(spec, RAMPS["velocity"]) if isinstance(spec, str) else [tuple(p) for p in spec]
+    pts = sorted((float(f), max(0.1, float(v))) for f, v in pts)
+
+    def speed_at(f):
+        if f <= pts[0][0]:
+            return pts[0][1]
+        for (f0, v0), (f1, v1) in zip(pts, pts[1:]):
+            if f <= f1:
+                u = (f - f0) / max(1e-6, f1 - f0)
+                u = u * u * (3 - 2 * u)
+                return v0 + (v1 - v0) * u
+        return pts[-1][1]
+
+    piece = src_len / steps
+    expr, acc, fast = "", 0.0, []
+    bounds = []
+    for j in range(steps):
+        v = speed_at((j + 0.5) / steps)
+        bounds.append((j * piece, acc, v))
+        if v > 1.6:
+            fast.append((acc, acc + piece / v))
+        acc += piece / v
+    for a, o0, v in reversed(bounds):
+        term = f"{o0:.4f}+(T-{a:.4f})/{v:.4f}"
+        expr = term if not expr else f"if(lt(T,{a + piece:.4f}),{term},{expr})"
+    return expr, acc, fast
+
+
 def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -> dict:
     W, H, fps = canvas["width"], canvas["height"], canvas["fps"]
     src = Path(c["src"])
     info = probe(src)
     is_img = info.get("is_image") or src.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".bmp")
     speed = float(c.get("speed", 1))
+    ramp = None
     if is_img:
         dur = parse_time(c.get("duration", 3))
         cin, cout = 0.0, dur
@@ -163,6 +203,10 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
         cout = parse_time(c["out"]) if c.get("out") is not None else info["duration"]
         cout = min(cout, info["duration"])
         dur = (cout - cin) / speed
+        if c.get("ramp"):  # velocity edit: replaces "speed", mutes the clip (B-roll)
+            ramp = ramp_map(c["ramp"], cout - cin)
+            dur = ramp[1]
+            speed = (cout - cin) / dur
     c["_out"] = cout
     c["_dur"] = dur
 
@@ -249,7 +293,12 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
         env = f"between(t,{a:.3f},{a + d:.3f})*(1-(t-{a:.3f})/{d:.3f})"
         post.append(f"scale={W + 2 * amp}:{H + 2 * amp}:flags=lanczos,"
                     f"crop={W}:{H}:'{amp}+{amp}*sin(t*90)*{env}':'{amp}+{amp}*cos(t*77)*{env}'")
-    if speed != 1:
+    if ramp:
+        post.append(f"setpts='({ramp[0]})/TB'")
+        if ramp[2]:  # motion blur on the fast stretches: blend neighbouring source frames before fps drops them
+            en = "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in ramp[2])
+            post.append(f"split[rpa][rpb];[rpb]tmix=frames=4[rpm];[rpa][rpm]overlay=enable='{en}'")
+    elif speed != 1:
         post.append(f"setpts=PTS/{speed}")
     if c.get("color"):  # simple grade: {"brightness":0.03,"contrast":1.08,"saturation":1.15}
         g = c["color"]
@@ -265,7 +314,7 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
     if c.get("beauty"):
         vf = vf.replace("[v]", "[vbeauty]") + ";" + beauty_graph("[vbeauty]", "[v]", c["beauty"])
 
-    vol = 0 if c.get("mute") or not info.get("has_audio") or is_img else float(c.get("volume", 1))
+    vol = 0 if c.get("mute") or ramp or not info.get("has_audio") or is_img else float(c.get("volume", 1))
     clean = []
     if c.get("denoise"):
         clean.append(DENOISE.get(str(c["denoise"]), DENOISE["medium"]))
@@ -298,7 +347,7 @@ def keep_timing(clips: list[dict]) -> None:
         t = clips[i].get("transition")
         if isinstance(t, str):
             t = {"type": t}
-        if not t or t.get("type", "cut") == "cut":
+        if not t or t.get("type", "cut") in ("cut", "whip"):
             continue
         d = float(t.get("duration", 0.4))
         prev, cur = clips[i - 1], clips[i]
@@ -322,7 +371,7 @@ def join_segments(clips: list[dict], work: Path, vcodec: list[str], fps: int = 3
         t = c.get("transition") if i > 0 else None
         if isinstance(t, str):
             t = {"type": t}
-        if t and t.get("type", "cut") != "cut":
+        if t and t.get("type", "cut") not in ("cut", "whip"):
             d = min(float(t.get("duration", 0.4)), clips[i - 1]["_dur"] / 2, c["_dur"] / 2)
             ttype = t["type"] if t["type"] in XFADES else "fade"
             trans.append((ttype, d))
@@ -845,7 +894,8 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
     if plan.get("sound_design"):
         # guard: the export once kept only 13 of 45 effect sounds while the editor played them all — say it loudly
         fxn = sum(1 for o in plan.get("overlays", []) or []
-                  if (o.get("_motion") or o.get("comp")) not in (None, "BlueText") and "sfx" not in o)
+                  if ((o.get("_motion") or o.get("comp")) not in (None, "BlueText")
+                      or o.get("type") in ("freeze", "spotlight", "whip")) and "sfx" not in o)
         print(f"[render] tiếng hiệu ứng: {len(hits)} tiếng cho {fxn} hiệu ứng", flush=True)
         if fxn and len(hits) < fxn * 0.6:
             print("[render] CẢNH BÁO: số tiếng ít hơn hẳn số hiệu ứng — kiểm tra sound.design / sfx_events trước khi giao",
@@ -896,6 +946,30 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
 
 
 # ------------------------------------------------------------------ main
+
+def trend_layers(plan: dict, clips: list[dict], starts: list[float], total: float) -> None:
+    """TREND pack glue: clip "transition": "whip" -> a whip layer over the hard cut (drawn first, under everything);
+    a "freeze" overlay with "name" -> a NameTag motion card right above it."""
+    ovs = plan.setdefault("overlays", [])
+    whips = []
+    for i in range(1, len(clips)):
+        t = clips[i].get("transition")
+        t = {"type": t} if isinstance(t, str) else (t or {})
+        if t.get("type") == "whip":
+            d = min(float(t.get("duration", 0.36)), clips[i - 1]["_dur"], clips[i]["_dur"])
+            whips.append({"type": "whip", "start": max(0, starts[i] - d / 2), "end": min(total, starts[i] + d / 2),
+                          "_at": starts[i], "dir": t.get("dir", "left"), "amount": t.get("amount", 0.6)})
+    ovs[:0] = whips
+    for j in range(len(ovs) - 1, -1, -1):
+        o = ovs[j]
+        if o.get("type") == "freeze" and o.get("name"):
+            tag = {"type": "motion", "comp": "NameTag", "start": o.get("start", 0), "props": {
+                "name": o["name"], "role": o.get("role", ""), "kicker": o.get("kicker", ""), **(o.get("tag") or {})}}
+            for k in ("clip", "end", "duration"):
+                if k in o:
+                    tag[k] = o[k]
+            ovs.insert(j + 1, tag)
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -972,6 +1046,7 @@ def main():
     if a.base_only:
         print(f"[render] base only -> {base}")
         return
+    trend_layers(plan, clips, starts, total)
     prepare_motion(plan, starts, total, cv, work, root)
     ass = build_ass(plan, cv["width"], cv["height"], clips, starts, total, work)
     preview = tuple(map(float, a.preview.split("-"))) if a.preview else None

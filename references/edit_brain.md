@@ -17,12 +17,14 @@ The worst VIP edit is the same sequence on every video: hook zoom → frost → 
 | style | when | motifs (pick 3) | camera | sound |
 |---|---|---|---|---|
 | **Calm Premium** | sharing knowledge, AI/tech, finance, real estate | two-tier captions, frost scenes, Tiles / Checklist, GiantCaption behind | push 6 %, punch 1.15, one snap per minute | soft whoosh, pop, ding, light boom |
-| **Hype Trend** | shop sales, phones, gym, promos | Stamp, CountUp, VsCards, Shockwave, snap zooms, IconSlam | snap 2× every 8–10 s, shake on hits | boom + whoosh layered, hit, cash, riser before the price |
+| **Hype Trend** | shop sales, phones, gym, promos | Stamp, CountUp, VsCards, Shockwave, snap zooms, IconSlam, PriceSlash, Receipt, whip pans, velocity B-roll | snap 2× every 8–10 s, shake on hits | boom + whoosh layered, hit, cash, riser before the price |
 | **Creator Showcase** (the "10 effects" reel look) | tool or feature lists, tutorials, "N tips" | OrbitCarousel, VisionCarousel, BarChartRace / LineGraph, DeviceSplay, ConstellationHub, labelled cards "01 · …" | static or gentle; the graphics move, not the camera | boom on each card entrance, sparkle on reveals, pop on list items |
 | **Doodle Vlog** | lifestyle, beauty, spa, fashion, kids | outline + DoodleStickers, Polaroids, KineticTitle, Highlighter | punch-ins on reactions | sparkle, pop, cartoon (light), laugh only for real jokes |
-| **News Wall** | news, commentary, drama, trends | HeadlineWall behind the person, Newspaper, Stamp, NotifyStack, CommentsDrop, bw / vhs for the past | snap on reveals | boom, glitch, camera, typing |
-| **Cinematic Story** | food, travel, hospitality, brand films | TitleCard chapters, Polaroids, SplitFlap places, film / warm looks, InkSpread into one big number | slow push / pull on every shot, cut on the beat | music-led; whoosh on chapter changes; sparkle on the dish or hero moment |
+| **News Wall** | news, commentary, drama, trends | HeadlineWall behind the person, Newspaper, Stamp, NotifyStack, CommentsDrop, bw / vhs for the past, freeze + NameTag for each person, MapPin for where it happened | snap on reveals | boom, glitch, camera, typing |
+| **Cinematic Story** | food, travel, hospitality, brand films | TitleCard chapters, Polaroids, SplitFlap places, film / warm looks, InkSpread into one big number, hero speed ramps, MapPin | slow push / pull on every shot, cut on the beat | music-led; whoosh on chapter changes; sparkle on the dish or hero moment |
 | **Data Explainer** | statistics, comparisons, results | BarChartRace, LineGraph, CountUp, VsCards, ExplodedStack | static | ding on numbers, riser into the key stat |
+
+**TREND pack quick picks (11/2026):** character intro = `freeze` with `name` on the first pause; the key promise = `spotlight`; price drop = `PriceSlash`; "how the money adds up" = `Receipt`; address / location = `MapPin`; B-roll energy = `"ramp"` + `"transition": "whip"`; short-form ending = `loopback`. Use one or two per video, not all of them.
 
 ## 3. Variety rules (check before rendering)
 - **Repetition:**

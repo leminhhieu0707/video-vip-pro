@@ -242,16 +242,41 @@ Props are `x`, `y` (0–1) plus the ones listed below; times are seconds from th
 
 Person outline layer (vipfx), drawn as a hand-drawn line around the speaker: `{"type": "outline", "color": "#FFFFFF", "width": 9, "gap": 16, "boil": 3}`. Pair it with `DoodleStickers`.
 
+## TREND pack (11/2026 creator trends: `src/blue/Trend.tsx`, `scripts/vipfx.py`, `render.py`)
+
+**Motion comps**
+| comp | props | use |
+|---|---|---|
+| `NameTag` | `name`, `role`, `kicker`, `x` 0.08, `y` 0.66, `align` left/right | Character intro card: name rises letter by letter, glowing bar, role pill. Added for you by a `freeze` with `name`. |
+| `PriceSlash` | `old`, `new`, `unit`, `label`, `badge`, `slashAt` 0.3, `newAt` 0.75, `y` 0.18 | The old price is struck through in red and drops back; the new gold price slams in with sparks, then a red badge. Shop price reveals. |
+| `Receipt` | `title`, `sub`, `items: [{t, v}]`, `total`, `totalLabel`, `stamp`, `w` 0.8, `step` | A paper bill prints out of a slot line by line, ends with the total and an optional stamp ("ĐÃ THANH TOÁN"). Money stories, trade-in maths, price breakdowns. |
+| `MapPin` | `place`, `sub`, `src` (your own map screenshot, else a drawn map), `pin` [x, y] on the map, `full`, `zoom` 2.4, `fly` 1.1 | Camera flies into a map, a pin drops with ripples, then an address card pops. Shop address, project location, where a story happened. Never geocode: use a screenshot the user gave or the drawn map. |
+
+Sounds follow the props automatically (strike swipe, slam hit + kaching, printer keys + kaching on the total, pin pop).
+
+**Person-aware and frame layers (vipfx)**
+| overlay | what it does |
+|---|---|
+| `{"type":"freeze","clip":0,"start":4.1,"end":5.6,"name":"Minh Đức Store","role":"419 Điện Biên Phủ","kicker":"SHOP IPHONE","style":"dark"}` | Character intro: white flash, the frame freezes, the room darkens (`style` dark / bw / theme), the speaker becomes a white-outlined sticker (two-model matte, keeps spread arms) and slowly pushes in (`zoom` 1.07). Video only, the voice keeps playing, so place it on a pause (≥ 1 s), a voice-over or before the first word, never mid-sentence. `"at"` picks a different source moment. |
+| `{"type":"spotlight","clip":3,"start":0,"end":2.2,"at":[0.5,0.33]}` | The room dims and desaturates, a warm light pool + beam from above lands behind the speaker, who stays lit (`dim` 0.55, `color`, `beam`). The punchline / key promise. |
+| `{"type":"loopback","duration":0.5}` | The last 0.5 s cross-fades into the opening frames, so TikTok / Reels replay seamlessly. Write the last line so it leads into the hook. |
+
+**Clip-level**
+- **Speed ramp (velocity edit):** `"ramp": "velocity"` on a B-roll clip (fast → slow → fast). Presets: `velocity`, `hero` (normal → slow-mo → out), `rush_in` (rush, land slow), `slowmo_end`; or your own `[[fraction, speed], …]`. It replaces `speed`, mutes the clip, adds motion blur on the fast stretches, and the output length follows from the curve. Never on talking clips.
+- **Whip pan:** `"transition": "whip"` or `{"type": "whip", "dir": "right", "duration": 0.36, "amount": 0.6}`. A hard cut becomes a whip: the frame slides out with heavy horizontal motion blur, the next one slides in. It does not shorten the timeline (no overlap) and gets a whoosh. Best between B-roll shots and into a new section; at most one every ~10 s.
+
+**Sound pairings:** freeze `camera` + `hit`, spotlight low `boom`, whip `whoosh` (viral style: flash / thump / dwhoosh).
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.
   - `Rich.tsx`: text markup.
-  - `Blue.tsx` / `Vip.tsx`: the comps.
+  - `Blue.tsx` / `Vip.tsx` / `Pro.tsx` / `Trend.tsx`: the comps.
   - `Root.tsx`: the registry.
   - Studio: `cd motion && npx remotion studio src/index.ts`.
 - **`motion/render_motion.py COMP '<props json>' --duration 3 [--still 1.5 -o x.png]`:** renders one item. Use stills to check a design.
 - **Adding a comp:** write it with colours wrapped in `T('…')`, then register the name in `Root.tsx`, in `COMPS` in `render_motion.py`, and in `MOTION_COMPS` in `editor/app.js`.
 - **VIP Editor preview limits:**
   - It previews motion comps.
-  - `bg` / `popout` / `lens` / `fx` and `behind` only appear in "Xuất nháp".
+  - `bg` / `popout` / `lens` / `fx` / `freeze` / `spotlight` / `loopback`, whip transitions and `behind` only appear in "Xuất nháp".
   - Frost tints in the preview stay blue; the export uses the theme.

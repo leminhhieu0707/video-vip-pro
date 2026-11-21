@@ -10,6 +10,16 @@ Overlay types handled here (all take start/end or clip + relative times like any
   {"type": "lens", "at": [0.5, 0.33], "pos": [0.62, 0.36], "size": 0.42, "zoom": 1.9}    magnifying glass
   {"type": "fx", "effect": "vhs" | "film" | "bw" | "warm" | "cool", "compare": {"from": 0.0, "to": 1.0}}
       frame look for the range; "compare" shows it only left of a moving split line (before/after slider)
+TREND pack (11/2026):
+  {"type": "spotlight", "at": [0.5, 0.33], "dim": 0.55, "color": "0xFFF1D6", "beam": true}
+      the room goes dark, a warm light pool (and a beam from above) behind the speaker, who stays lit
+  {"type": "freeze", "at": 12.3, "name": "...", "role": "...", "style": "dark" | "bw" | "theme", "zoom": 1.07, "stroke": 14}
+      character intro: the frame freezes (white flash), the room darkens, the speaker becomes a white-outlined sticker
+      that slowly pushes in; "name"/"role" add a NameTag motion card (render.py). Video only, the audio keeps running,
+      so use it on a pause, a voice-over or the hook before the first word.
+  {"type": "whip", ...}  added by render.py for a clip "transition": "whip" (or {"type":"whip","dir":"right","duration":0.36}):
+      a hard cut becomes a whip pan, the frame slides out with heavy horizontal motion blur and the next one slides in
+  {"type": "loopback", "duration": 0.5}   the last half second cross-fades into the opening frames: a seamless replay loop
 Motion overlays (Remotion) get two extra flags here:
   "behind": true   drawn between the room and the speaker (text behind the head, orbit ring back half, code wall)
   "fill": "video"  the comp's alpha becomes a window onto the (zoomed) video ("chữ chứa video"); frame darkens behind
@@ -27,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import theme  # noqa: E402
 from common import FFMPEG, parse_time  # noqa: E402
 
-TYPES = {"bg", "popout", "lens", "fx", "outline"}
+TYPES = {"bg", "popout", "lens", "fx", "outline", "spotlight", "freeze", "whip", "loopback"}
 MATTE_VERSION = 4
 MATTE_MODEL = "u2net"  # tested 20/11: cleaner than u2net_human_seg (which grabbed a wall logo) and more solid than isnet
 
@@ -116,7 +126,7 @@ class Ctx:
         (e.g. portrait blur + text behind the head on the same sentence) share one matte pass."""
         rs = []
         for o in overlays or []:
-            if o.get("type") in ("bg", "popout", "outline") or (o.get("type") == "motion" and (o.get("behind") or o.get("fill"))):
+            if o.get("type") in ("bg", "popout", "outline", "spotlight") or (o.get("type") == "motion" and (o.get("behind") or o.get("fill"))):
                 try:
                     rs.append(times(o, self.starts, self.total))
                 except Exception:
@@ -195,7 +205,95 @@ def outline(o: dict, k: int, vlast: str, cx: Ctx, s: float, e: float, fd: float)
     return f"[vo{k}]"
 
 
+def _png_input(cx: Ctx, png: Path, dur: float, s: float, lab: str) -> str:
+    i = cx.add_input(["-loop", "1", "-framerate", str(cx.fps), "-t", f"{dur + 0.2:.3f}", "-i", str(png)])
+    cx.fc.append(f"[{i}:v]format=rgba,setpts=PTS-STARTPTS+{s:.3f}/TB{lab}")
+    return lab
+
+
+def spotlight_png(cx: Ctx, o: dict) -> Path:
+    """Light pool (soft ellipse behind the head) + optional beam from the top, as one RGBA overlay."""
+    from PIL import Image, ImageDraw, ImageFilter
+    ax, ay = o.get("at", [0.5, 0.33])
+    col = str(theme.tint(o.get("color", "0xFFF1D6"))).replace("0x", "")[:6]
+    a = float(o.get("light", 0.55))
+    key = hashlib.md5(f"{cx.W}x{cx.H}|{ax}|{ay}|{col}|{a}|{o.get('beam', True)}".encode()).hexdigest()[:10]
+    out = cx.work / "fx" / f"spot_{key}.png"
+    if out.exists():
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    W, H, q = cx.W, cx.H, 4
+    w, h = W // q, H // q
+    rgb = tuple(int(col[i:i + 2], 16) for i in (0, 2, 4))
+    m = Image.new("L", (w, h), 0)
+    d = ImageDraw.Draw(m)
+    rx, ry = 0.46 * w, 0.24 * h
+    d.ellipse([ax * w - rx, ay * h - ry * 0.7, ax * w + rx, ay * h + ry * 1.3], fill=int(255 * a))
+    if o.get("beam", True):
+        bw0, bw1 = 0.12 * w, 0.42 * w
+        d.polygon([(ax * w - bw0, 0), (ax * w + bw0, 0), (ax * w + bw1, ay * h + ry), (ax * w - bw1, ay * h + ry)],
+                  fill=int(255 * a * 0.55))
+    m = m.filter(ImageFilter.GaussianBlur(w * 0.07)).resize((W, H), Image.BICUBIC)
+    img = Image.new("RGBA", (W, H), rgb + (0,))
+    img.putalpha(m)
+    img.save(out)
+    return out
+
+
+def freeze_pngs(cx: Ctx, o: dict, at: float) -> tuple[Path, Path]:
+    """(plain frame, styled frame) for the character intro: darkened room + white-outlined speaker sticker."""
+    from PIL import Image, ImageFilter
+    import cv2
+    style = o.get("style", "dark")
+    stroke = int(o.get("stroke", 14))
+    key = hashlib.md5(f"{cx.base.stat().st_mtime_ns}|{at:.3f}|{style}|{stroke}|{theme.tint('0x0E1A3A')}|{cx.W}x{cx.H}".encode()).hexdigest()[:10]
+    d = cx.work / "fx"
+    plain, styled = d / f"frz_{key}_a.png", d / f"frz_{key}_b.png"
+    if plain.exists() and styled.exists():
+        return plain, styled
+    d.mkdir(parents=True, exist_ok=True)
+    subprocess.run([FFMPEG, "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(cx.base), "-frames:v", "1",
+                    "-vf", f"scale={cx.W}:{cx.H}", str(plain)], check=True)
+    fr = Image.open(plain).convert("RGB")
+    from rembg import new_session
+    # one still, so afford two models: u2net (solid body) + u2net_human_seg (keeps spread arms and hands), main blob only
+    ms = [np.asarray(new_session(n).predict(fr)[0].resize(fr.size, Image.BILINEAR), np.float32) / 255.0
+          for n in (MATTE_MODEL, "u2net_human_seg")]
+    m = keep_main_blob(np.clip((np.maximum(*ms) - 0.2) / 0.55, 0, 1))
+    # room: darker / black-and-white / brand tint, a little blur
+    arr = np.asarray(fr.filter(ImageFilter.GaussianBlur(5)), np.float32)
+    if style == "bw":
+        arr = np.repeat(arr.mean(axis=2, keepdims=True), 3, axis=2) * 0.55
+    else:
+        arr = arr * 0.42
+        if style == "theme":
+            dark = str(theme.tint("0x0E1A3A")).replace("0x", "")[:6]
+            tc = np.array([int(dark[i:i + 2], 16) for i in (0, 2, 4)], np.float32)
+            arr = arr * 0.55 + tc * 0.45
+    out = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).convert("RGBA")
+    # sticker: white stroke (dilated matte) + soft drop shadow, then the speaker
+    mb = (m > 0.45).astype(np.uint8)
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * stroke + 1, 2 * stroke + 1))
+    ring = cv2.GaussianBlur(cv2.dilate(mb, k).astype(np.float32), (5, 5), 0)
+    sh = cv2.GaussianBlur(ring, (0, 0), stroke * 1.6)
+    shadow = Image.new("RGBA", fr.size, (0, 0, 0, 0))
+    shadow.putalpha(Image.fromarray((sh * 150).astype(np.uint8)))
+    out.alpha_composite(shadow, (stroke // 2, stroke))
+    white = Image.new("RGBA", fr.size, (255, 255, 255, 0))
+    white.putalpha(Image.fromarray((ring * 255).astype(np.uint8)))
+    out.alpha_composite(white)
+    person = fr.convert("RGBA")
+    person.putalpha(Image.fromarray((m * 255).astype(np.uint8)))
+    out.alpha_composite(person)
+    out.convert("RGB").save(styled)
+    return plain, styled
+
+
 def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
+    if o["type"] == "loopback":
+        d = float(o.get("duration", 0.5))
+        o = {**o, "start": max(0.0, cx.total - d), "end": cx.total}
+        o.pop("clip", None)
     s, e = times(o, cx.starts, cx.total)
     if e - s < 0.05:
         return vlast
@@ -204,8 +302,11 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     fd = float(o.get("fade", 0.25))
     if t == "outline":
         return outline(o, k, vlast, cx, s, e, fd)
-    fc.append(f"{vlast}split=2[vk{k}][cl{k}]")
-    vlast, clean = f"[vk{k}]", f"[cl{k}]"
+    if t in ("freeze", "loopback"):  # built from stills / the base file, no copy of the live stream needed
+        clean = None
+    else:
+        fc.append(f"{vlast}split=2[vk{k}][cl{k}]")
+        vlast, clean = f"[vk{k}]", f"[cl{k}]"
 
     if t == "bg":
         if not o.get("src"):
@@ -324,6 +425,68 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         else:
             fc.append(f"{l}{look},format=rgba,{_fades(s, e, cx.total, float(o.get('fade', 0.2)))}[fxv{k}]")
         return _over(cx, vlast, f"[fxv{k}]", s, e, k, "f")
+
+    if t == "spotlight":
+        dim = float(o.get("dim", 0.55))
+        fc.append(f"{clean}split=2[sla{k}][slb{k}]")
+        room = cx.cut(f"[sla{k}]", s, e, f"[slr{k}]")
+        fc.append(f"{room}eq=brightness=-{dim * 0.32:.3f}:saturation={1 - dim * 0.45:.2f}:contrast=1.06,vignette=PI/3[sld{k}]")
+        g = _png_input(cx, spotlight_png(cx, o), e - s, s, f"[slg{k}]")
+        fc.append(f"[sld{k}]{g}overlay=0:0:shortest=1[slx{k}]")
+        fc.append(f"[slb{k}]eq=brightness=0.025:contrast=1.04[slp{k}]")
+        p = person_layer(cx, f"[slp{k}]", s, e, k)
+        fc.append(f"[slx{k}]{p}overlay=0:0:shortest=1,format=rgba,{_fades(s, e, cx.total, fd)}[slo{k}]")
+        return _over(cx, vlast, f"[slo{k}]", s, e, k, "s")
+
+    if t == "freeze":
+        if "at" in o:
+            at = parse_time(o["at"]) + (cx.starts[int(o["clip"])] if "clip" in o else 0)
+        else:
+            at = s
+        plain, styled = freeze_pngs(cx, o, at)
+        dur = e - s
+        z = float(o.get("zoom", 1.07))
+        n = max(2, int(round(dur * cx.fps)))
+        a = _png_input(cx, plain, dur, s, f"[fza{k}]")
+        i = cx.add_input(["-loop", "1", "-framerate", str(cx.fps), "-t", f"{dur + 0.2:.3f}", "-i", str(styled)])
+        # slow push-in with a decelerating ease (zoompan on a 2x still keeps it smooth)
+        fc.append(f"[{i}:v]scale={W * 2}:{H * 2}:flags=lanczos,zoompan=z='1+{z - 1:.3f}*(1-pow(1-min(on/{n},1),3))':"
+                  f"x='(iw-iw/zoom)/2':y='(ih-ih/zoom)*0.4':d=1:s={W}x{H}:fps={cx.fps},format=rgba,"
+                  f"fade=t=in:st=0.06:d=0.18:alpha=1,setpts=PTS-STARTPTS+{s:.3f}/TB[fzb{k}]")
+        fc.append(f"{a}[fzb{k}]overlay=0:0:shortest=1[fzc{k}]")
+        top = f"[fzc{k}]"
+        if o.get("flash", True):
+            fc.append(f"color=c=white:s={W}x{H}:r={cx.fps},trim=duration=0.25,format=rgba,fade=t=out:st=0:d=0.22:alpha=1,"
+                      f"setpts=PTS-STARTPTS+{s:.3f}/TB[fzw{k}]")
+            fc.append(f"{top}[fzw{k}]overlay=0:0:eof_action=pass[fzd{k}]")
+            top = f"[fzd{k}]"
+        out_fade = f",fade=t=out:st={max(s, e - 0.12):.3f}:d=0.12:alpha=1" if e < cx.total - 0.01 else ""
+        fc.append(f"{top}format=rgba{out_fade}[fzo{k}]")
+        return _over(cx, vlast, f"[fzo{k}]", s, e, k, "z")
+
+    if t == "whip":
+        at = float(o.get("_at", (s + e) / 2))
+        amt = float(o.get("amount", 0.6))
+        sg = 1 if o.get("dir", "left") == "left" else -1
+        a0, a1 = max(1e-3, at - s), max(1e-3, e - at)
+        l = cx.cut(clean, s, e, f"[wp{k}]")
+        # mirror-tile the frame so the moving crop never runs out of picture
+        fc.append(f"{l}split=3[wa{k}][wb{k}][wc{k}];[wb{k}]hflip[wbf{k}];[wc{k}]hflip[wcf{k}];"
+                  f"[wbf{k}][wa{k}][wcf{k}]hstack=3[wt{k}]")
+        xo = f"{W}+{sg}*{W}*{amt}*pow(min(1,(t-{s:.3f})/{a0:.3f}),2)"
+        xi = f"{W}-{sg}*{W}*{amt}*pow(1-min(1,(t-{at:.3f})/{a1:.3f}),2)"
+        fc.append(f"[wt{k}]crop=w={W}:h={H}:x='if(lt(t,{at:.3f}),{xo},{xi})':y=0,split=2[ws{k}][wbl{k}]")
+        fc.append(f"[wbl{k}]scale={W // 2}:{H // 2},gblur=sigma={W * 0.03:.0f}:sigmaV=0,scale={W}:{H}[wbb{k}]")
+        hd = max(a0, a1)
+        fc.append(f"[ws{k}][wbb{k}]blend=all_expr='A+(B-A)*min(1,1.6*max(0,1-abs(T-{at:.3f})/{hd:.3f}))',format=yuv420p[wo{k}]")
+        return _over(cx, vlast, f"[wo{k}]", s, e, k, "w")
+
+    if t == "loopback":
+        d = e - s
+        i = cx.add_input(["-t", f"{d + 0.1:.3f}", "-i", str(cx.base)])
+        fc.append(f"[{i}:v]fps={cx.fps},scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{s:.3f}/TB,"
+                  f"fade=t=in:st={s:.3f}:d={d:.3f}:alpha=1[lb{k}]")
+        return _over(cx, vlast, f"[lb{k}]", s, e, k, "o")
     return vlast
 
 

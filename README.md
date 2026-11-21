@@ -1,6 +1,6 @@
 # 🎬 Video VIP Pro: skill edit video cho Claude Code
 
-Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 50 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
+Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 60 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
 
 - **Mọi ngành:** bán hàng, điện thoại, bất động sản, spa/làm đẹp, ăn uống, giáo dục/khoá học, tài chính, gym, du lịch, ô tô, thời trang, tin tức, vlog.
 - **Màu chủ đạo theo ý bạn:** có sẵn 12 bộ màu (xanh, cam, đỏ, vàng kim, đen vàng, xanh lá, hồng, tím, ngọc, da trời, nâu, đen), hoặc bất kỳ mã màu nào. Cả video đổi màu theo, kể cả hiệu ứng chuyển động.
@@ -13,7 +13,10 @@
 - zoom giật theo câu;
 - phóng gấp đôi rồi kéo ra, có nhoè chuyển động;
 - mở đầu khung sát rồi bật ra;
-- rung.
+- rung;
+- speed ramp nhanh – chậm – nhanh cho B-roll (có nhoè chuyển động);
+- whip pan (lia nhoè sang cảnh mới);
+- cuối video nối vào đầu để lặp mượt.
 
 **Tách người khỏi nền:**
 - chữ khổng lồ nấp sau đầu;
@@ -22,7 +25,9 @@
 - thay nền bằng video khác;
 - người tràn khung bo góc;
 - kính lúp;
-- vòng chữ quay quanh người.
+- vòng chữ quay quanh người;
+- dừng hình giới thiệu nhân vật (viền trắng kiểu sticker + thẻ tên);
+- đèn sân khấu (phòng tối, người sáng).
 
 **Chữ:**
 - phụ đề 2 tầng hiện mờ dần;
@@ -33,7 +38,10 @@
 - bảng lật sân bay;
 - bút dạ quang;
 - khoanh tròn;
-- đếm số chạy.
+- đếm số chạy;
+- gạch giá cũ, bật giá mới;
+- hoá đơn in ra từng dòng;
+- bản đồ bay tới địa điểm + ghim rơi.
 
 **Giao diện:**
 - cuộc gọi đến;

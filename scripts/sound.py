@@ -54,9 +54,14 @@ SOUND_MAP: dict[str, list[tuple[str, float, float]]] = {
     "OrbitRing": [("sparkle", 0.0, 0.14)], "Portal": [("riser", -0.2, 0.12), ("boom", 0.4, 0.16)], "ScanLines": [("glitch", 0.0, 0.1)],
     "VhsHud": [("glitch", 0.0, 0.2)], "DoodleStickers": [("pen", 0.0, 0.16), ("sparkle", 0.3, 0.12)], "ScriptPage": [("page", 0.0, 0.16), ("keyboard", 0.3, 0.12)],
     "Eyedropper": [("mouse", 0.8, 0.2)], "CompareHandle": [("swipe", 0.2, 0.16)], "FollowCard": [("mouse", 0.9, 0.22), ("ding", 1.1, 0.16)],
+    # TREND pack
+    "NameTag": [("whoosh", 0.05, 0.16)], "PriceSlash": [("swipe", 0.3, 0.16), ("hit", 0.75, 0.2), ("kaching", 0.85, 0.16)],
+    "Receipt": [("keyboard", 0.2, 0.12), ("kaching", 1.8, 0.18)], "MapPin": [("whoosh", 0.0, 0.16), ("pop", 1.05, 0.18)],
 }
 TYPE_MAP = {"frost": [("whoosh", -0.12, 0.18)], "bg": [("whoosh", -0.08, 0.18)], "popout": [("whoosh", -0.1, 0.2), ("paper", 0.15, 0.14)],
-            "lens": [("pop", 0.0, 0.16)], "outline": [("pen", 0.0, 0.16), ("sparkle", 0.2, 0.12)]}
+            "lens": [("pop", 0.0, 0.16)], "outline": [("pen", 0.0, 0.16), ("sparkle", 0.2, 0.12)],
+            "spotlight": [("boom", 0.0, 0.14)], "freeze": [("camera", 0.0, 0.2), ("hit", 0.05, 0.14)],
+            "whip": [("whoosh", 0.0, 0.22)]}
 FX_MAP = {"vhs": [("glitch", 0.0, 0.2)], "film": [("camera", 0.0, 0.12)], "bw": [("whoosh", 0.0, 0.12)]}
 
 
@@ -114,9 +119,13 @@ VIRAL_MAP: dict[str, list[tuple[str, float, float]]] = {
     "OrbitRing": [("data", 0.0, 0.1)], "Portal": [("charge", -0.6, 0.12), ("thump", 0.4, 0.16)], "ScanLines": [("flicker", 0.0, 0.1)],
     "VhsHud": [("flicker", 0.0, 0.16)], "DoodleStickers": [("popup", 0.0, 0.16), ("popup", 0.3, 0.12)], "ScriptPage": [("data", 0.1, 0.1)],
     "Eyedropper": [("vclick", 0.8, 0.18)], "CompareHandle": [("data", 0.2, 0.12)], "FollowCard": [("vclick", 0.9, 0.2), ("popup", 1.1, 0.14)],
+    "NameTag": [("dwhoosh", 0.05, 0.14)], "PriceSlash": [("dwhoosh", 0.3, 0.14), ("thump", 0.75, 0.2), ("vclick", 0.85, 0.14)],
+    "Receipt": [("data", 0.2, 0.12), ("vclick", 1.8, 0.18)], "MapPin": [("dwhoosh", 0.0, 0.14), ("popup", 1.05, 0.16)],
 }
 VIRAL_TYPE = {"frost": [("dwhoosh", -0.12, 0.16)], "bg": [("cutout", 0.0, 0.18)], "popout": [("cutout", 0.0, 0.2), ("flash", 0.05, 0.12)],
-              "lens": [("popup", 0.0, 0.15)], "outline": [("cutout", 0.0, 0.18)]}
+              "lens": [("popup", 0.0, 0.15)], "outline": [("cutout", 0.0, 0.18)],
+              "spotlight": [("thump", 0.0, 0.16)], "freeze": [("flash", 0.0, 0.2), ("thump", 0.05, 0.14)],
+              "whip": [("dwhoosh", 0.0, 0.22)]}
 VIRAL_FX = {"vhs": [("flicker", 0.0, 0.2)], "film": [("flash", 0.0, 0.12)], "bw": [("flash", 0.0, 0.12)]}
 
 
@@ -177,6 +186,25 @@ def layers(spec) -> list[tuple[str, float, float | None]]:
     return []
 
 
+def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[str, float, float]] | None:
+    """TREND pack comps whose beats move with their props (slashAt, newAt, number of receipt lines, fly time)."""
+    f = (lambda a, b: b if viral else a)
+    if comp == "PriceSlash":
+        sl, nw = float(props.get("slashAt", 0.3)), float(props.get("newAt", 0.75))
+        out = [(f("swipe", "dwhoosh"), sl, 0.16), (f("hit", "thump"), nw, 0.2), (f("kaching", "vclick"), nw + 0.1, 0.16)]
+        return out + ([(f("pop", "popup"), nw + 0.3, 0.14)] if props.get("badge") else [])
+    if comp == "Receipt":
+        at, n = float(props.get("at", 0)), max(1, len(props.get("items") or []) or 2)
+        st = props.get("step") or max(0.28, min(0.7, (dur - at - 1.4) / (n + 1)))
+        tt = at + 0.35 + n * float(st)
+        out = [(f("keyboard", "data"), at + 0.15, 0.12), (f("kaching", "vclick"), tt, 0.18)]
+        return out + ([(f("hit", "thump"), tt + 0.45, 0.18)] if props.get("stamp") else [])
+    if comp == "MapPin":
+        at, fly = float(props.get("at", 0)), float(props.get("fly", 1.1))
+        return [(f("whoosh", "dwhoosh"), at, 0.16), (f("pop", "popup"), at + fly - 0.05, 0.18), (f("ding", "popup"), at + fly + 0.3, 0.12)]
+    return None
+
+
 def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
     """Automatic sounds for every effect: [(family, timeline_time, volume)].
     "sound_design": "trend" (effects + zooms) or {"style": "trend", "cuts": true, "captions": true} for a denser
@@ -209,6 +237,9 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
         if ty == "motion" and (o.get("half") or (o.get("props") or {}).get("half")) == "back":
             continue
         t0 = float(o.get("start", 0)) + (starts[int(o["clip"])] if "clip" in o else 0)
+        if ty == "motion":
+            od = (float(o["end"]) - float(o.get("start", 0))) if o.get("end") is not None else float(o.get("duration", 3))
+            lay = trend_timed(comp, o.get("props") or {}, od, viral) or lay
         for fam, off, vol in lay:
             out.append((fam, t0 + off, vol))
         # list items that pop in one by one get one sound each
