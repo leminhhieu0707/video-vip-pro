@@ -58,6 +58,7 @@ SOUND_MAP: dict[str, list[tuple[str, float, float]]] = {
     "NameTag": [("whoosh", 0.05, 0.16)], "PriceSlash": [("swipe", 0.3, 0.16), ("hit", 0.75, 0.2), ("kaching", 0.85, 0.16)],
     "Receipt": [("keyboard", 0.2, 0.12), ("kaching", 1.8, 0.18)], "MapPin": [("whoosh", 0.0, 0.16), ("pop", 1.05, 0.18)],
     "DecodeText": [("keyboard", 0.05, 0.12)], "Countdown": [("ding", 0.0, 0.14)], "EvidenceBoard": [("camera", 0.25, 0.16)], "Audiogram": [("pop", 0.0, 0.1)],
+    "Text3D": [("boom", 0.0, 0.16)], "WeaveText": [("whoosh", 0.0, 0.14)], "ProjectText": [("camera", 0.0, 0.14)], "MetalText": [("hit", 0.0, 0.18), ("sparkle", 0.45, 0.14)], "GlassText": [("whoosh", 0.0, 0.14)], "NeonText": [("glitch", 0.0, 0.12)], "WriteOn": [("pen", 0.0, 0.16)], "SliceText": [("swipe", 0.0, 0.16)], "WeightPulse": [("pop", 0.35, 0.12)], "DustText": [("whoosh", 1.0, 0.14)], "PunchWord": [("boom", 0.0, 0.2)], "DocLabel": [("typing", 0.3, 0.12)], "QuoteCard": [("page", 0.0, 0.14)], "MarqueeRows": [("whoosh", 0.0, 0.14)], "TrackLabel": [("pop", 0.0, 0.16)], "RiseText": [("whoosh", 0.0, 0.16)], "MirrorText": [("sparkle", 0.0, 0.14)], "FocusText": [("camera", 1.4, 0.14)], "Odometer": [("riser", 0.0, 0.12), ("kaching", 1.3, 0.18)], "SealBadge": [("hit", 0.0, 0.18)], "CubeFlip": [("swipe", 0.0, 0.14)], "RaysTitle": [("riser", -0.2, 0.12), ("boom", 0.3, 0.16)], "InkText": [("whoosh", 0.0, 0.12)], "RansomText": [("paper", 0.0, 0.16)], "AIChat": [("pop", 0.0, 0.14), ("keyboard", 0.8, 0.12)], "BeatText": [],
 }
 TYPE_MAP = {"frost": [("whoosh", -0.12, 0.18)], "bg": [("whoosh", -0.08, 0.18)], "popout": [("whoosh", -0.1, 0.2), ("paper", 0.15, 0.14)],
             "lens": [("pop", 0.0, 0.16)], "outline": [("pen", 0.0, 0.16), ("sparkle", 0.2, 0.12)],
@@ -126,6 +127,7 @@ VIRAL_MAP: dict[str, list[tuple[str, float, float]]] = {
     "NameTag": [("dwhoosh", 0.05, 0.14)], "PriceSlash": [("dwhoosh", 0.3, 0.14), ("thump", 0.75, 0.2), ("vclick", 0.85, 0.14)],
     "Receipt": [("data", 0.2, 0.12), ("vclick", 1.8, 0.18)], "MapPin": [("dwhoosh", 0.0, 0.14), ("popup", 1.05, 0.16)],
     "DecodeText": [("data", 0.05, 0.12)], "Countdown": [("vclick", 0.0, 0.14)], "EvidenceBoard": [("flash", 0.25, 0.16)], "Audiogram": [("popup", 0.0, 0.1)],
+    "Text3D": [("thump", 0.0, 0.16)], "WeaveText": [("dwhoosh", 0.0, 0.14)], "ProjectText": [("flash", 0.0, 0.14)], "MetalText": [("thump", 0.0, 0.18), ("data", 0.45, 0.12)], "GlassText": [("dwhoosh", 0.0, 0.14)], "NeonText": [("flicker", 0.0, 0.14)], "WriteOn": [("data", 0.0, 0.12)], "SliceText": [("dwhoosh", 0.0, 0.16)], "WeightPulse": [("vclick", 0.35, 0.12)], "DustText": [("dwhoosh", 1.0, 0.14)], "PunchWord": [("thump", 0.0, 0.2)], "DocLabel": [("data", 0.3, 0.12)], "QuoteCard": [("popup", 0.0, 0.14)], "MarqueeRows": [("dwhoosh", 0.0, 0.14)], "TrackLabel": [("popup", 0.0, 0.16)], "RiseText": [("dwhoosh", 0.0, 0.16)], "MirrorText": [("flash", 0.0, 0.14)], "FocusText": [("flash", 1.4, 0.14)], "Odometer": [("data", 0.0, 0.12), ("vclick", 1.3, 0.18)], "SealBadge": [("thump", 0.0, 0.18)], "CubeFlip": [("dwhoosh", 0.0, 0.14)], "RaysTitle": [("charge", -0.5, 0.12), ("thump", 0.3, 0.16)], "InkText": [("dwhoosh", 0.0, 0.12)], "RansomText": [("cutout", 0.0, 0.16)], "AIChat": [("popup", 0.0, 0.14), ("data", 0.8, 0.12)], "BeatText": [],
 }
 VIRAL_TYPE = {"frost": [("dwhoosh", -0.12, 0.16)], "bg": [("cutout", 0.0, 0.18)], "popout": [("cutout", 0.0, 0.2), ("flash", 0.05, 0.12)],
               "lens": [("popup", 0.0, 0.15)], "outline": [("cutout", 0.0, 0.18)],
@@ -216,6 +218,18 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
         span = max(0.3, (dur - 1.2) / (len(L) + 1))
         return [(f("camera", "flash"), float((it.get("at") if isinstance(it, dict) else None) or 0.25 + i * span), 0.14)
                 for i, it in enumerate(L[:6])]
+    if comp == "CubeFlip":
+        ws = props.get("words") or [1, 2, 3]
+        at = float(props.get("at", 0))
+        st = props.get("step") or max(0.45, (dur - at - 0.4) / len(ws))
+        return [(f("swipe", "dwhoosh"), at + i * float(st), 0.14) for i in range(len(ws))]
+    if comp == "Odometer":
+        at, d = float(props.get("at", 0.1)), float(props.get("dur", 1.3))
+        return [(f("riser", "data"), at, 0.12), (f("kaching", "vclick"), at + d, 0.18)]
+    if comp == "FocusText":
+        return [(f("camera", "flash"), float(props.get("swap", 1.4)), 0.14)]
+    if comp == "BeatText":
+        return [(f("hit", "thump"), float(b), 0.1) for b in (props.get("beats") or [])[:16]]
     if comp == "MapPin":
         at, fly = float(props.get("at", 0)), float(props.get("fly", 1.1))
         return [(f("whoosh", "dwhoosh"), at, 0.16), (f("pop", "popup"), at + fly - 0.05, 0.18), (f("ding", "popup"), at + fly + 0.3, 0.12)]

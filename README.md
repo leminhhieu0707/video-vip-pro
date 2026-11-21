@@ -1,6 +1,6 @@
 # 🎬 Video VIP Pro: skill edit video cho Claude Code
 
-Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 75 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
+Đưa video thô vào và gọi skill. Claude tự nghe lời, bỏ câu hỏng, cắt câu khớp khẩu hình, zoom theo nhịp, gắn chữ 2 tầng và khoảng 100 hiệu ứng VIP, có tiếng hiệu ứng đi kèm, rồi xuất MP4. Muốn sửa chỗ nào thì gõ thêm một câu lệnh, hoặc mở **VIP Editor** để kéo thả tay mà không tốn token.
 
 - **Mọi ngành:** bán hàng, điện thoại, bất động sản, spa/làm đẹp, ăn uống, giáo dục/khoá học, tài chính, gym, du lịch, ô tô, thời trang, tin tức, vlog.
 - **Màu chủ đạo theo ý bạn:** có sẵn 12 bộ màu (xanh, cam, đỏ, vàng kim, đen vàng, xanh lá, hồng, tím, ngọc, da trời, nâu, đen), hoặc bất kỳ mã màu nào. Cả video đổi màu theo, kể cả hiệu ứng chuyển động.
@@ -50,6 +50,14 @@
 - bản đồ bay tới địa điểm + ghim rơi;
 - chữ giải mã, đồng hồ đếm ngược, sóng âm theo giọng;
 - bảng điều tra dây đỏ, ảnh đen trắng tô màu dần, ảnh tĩnh 3D.
+
+**Chữ VIP (26 kiểu):**
+- chữ 3D đứng trong phòng (người đi qua che chữ), chữ luồn quanh người, chữ chiếu lên tường, chữ kính mờ;
+- chữ vàng / bạc / chrome có vệt sáng, chữ neon bật sáng, chữ viết tay hiện theo nét;
+- chữ cắt lát, chữ đậm dần, chữ tan thành bụi, từ khoá phóng to cả màn hình, khối 3D lật, tiêu đề tia sáng, chữ loang mực;
+- số lăn kiểu đồng hồ cơ, con dấu tròn xoay, thẻ giá bám theo máy / tay;
+- chữ trồi từ sau mặt bàn, chữ phản chiếu trên bàn, chữ chuyển nét kiểu cine;
+- dòng địa điểm phim tài liệu, trích dẫn kiểu bài báo, chữ cắt dán từ báo, khung AI trả lời từng chữ, chữ nhún theo nhịp nhạc.
 
 **Studio Look (phòng thường thành phòng quay xịn):**
 - tự đồng bộ màu và độ sáng giữa các đoạn;

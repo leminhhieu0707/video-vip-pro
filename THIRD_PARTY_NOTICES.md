@@ -17,3 +17,7 @@ Sound effects in `assets/sfx/` are synthesized by `scripts/make_sfx.py` (no samp
 ## Decor props (assets/props)
 
 `plant`, `plant_tall`, `lamp`, `shelf`, `vase` were generated for this project with an image model (Nano Banana 2) and cut out with rembg. No third-party photos are included.
+
+## Dancing Script (motion/public/fonts/DancingScript-VF.ttf)
+
+Copyright The Dancing Script Project Authors. SIL Open Font License 1.1 (https://openfontlicense.org). Used for the handwriting text effects.

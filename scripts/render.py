@@ -755,7 +755,7 @@ def frost_layer(o: dict, k: int, vlast: str, fc: list[str], starts: list[float],
     return out
 
 
-RING_COMPS = {"OrbitRing", "Portal", "OrbitCarousel"}
+RING_COMPS = {"OrbitRing", "Portal", "OrbitCarousel", "WeaveText"}
 
 
 def resolve_stills(v, work: Path, width: int = 1080):
@@ -775,6 +775,68 @@ def resolve_stills(v, work: Path, width: int = 1080):
                  "-vf", f"scale={width // 2}:-2", "-q:v", "2", str(fp)])
         return str(fp)
     return v
+
+
+def track_box(base: Path, s: float, e: float, spec: dict, fps: int, work: Path) -> list[list[float]]:
+    """Follow a box (hand / product) through base.mp4[s, e] by template matching in a search window; returns the
+    box centre per frame as frame fractions. spec = {"box": [x, y, w, h]} (fractions at time s)."""
+    import cv2
+    import subprocess
+    import numpy as np
+    key = hashlib.md5(json.dumps([str(base), base.stat().st_mtime_ns, s, e, spec, fps]).encode()).hexdigest()[:10]
+    cache = work / "track" / f"t_{key}.json"
+    if cache.exists():
+        return json.loads(cache.read_text())
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    w, h = 270, 480
+    r = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{s:.3f}", "-t", f"{e - s:.3f}", "-i", str(base), "-vf", f"fps={fps},scale={w}:{h}",
+                        "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True)
+    frames = np.frombuffer(r.stdout, np.uint8)[: (len(r.stdout) // (w * h)) * w * h].reshape(-1, h, w)
+    bx, by, bw, bh = spec["box"]
+    x0, y0, tw, th = int(bx * w), int(by * h), max(8, int(bw * w)), max(8, int(bh * h))
+    tpl = frames[0][y0:y0 + th, x0:x0 + tw].astype(np.float32)
+    cx_, cy_ = x0 + tw / 2, y0 + th / 2
+    pts = []
+    for f in frames:
+        R_ = int(max(tw, th) * 0.8)
+        sx0, sy0 = int(max(0, cx_ - tw / 2 - R_)), int(max(0, cy_ - th / 2 - R_))
+        sx1, sy1 = int(min(w, cx_ + tw / 2 + R_)), int(min(h, cy_ + th / 2 + R_))
+        win = f[sy0:sy1, sx0:sx1].astype(np.float32)
+        if win.shape[0] > th and win.shape[1] > tw:
+            res = cv2.matchTemplate(win, tpl, cv2.TM_CCOEFF_NORMED)
+            _, mv, _, ml = cv2.minMaxLoc(res)
+            if mv > 0.35:
+                nx, ny = sx0 + ml[0] + tw / 2, sy0 + ml[1] + th / 2
+                cx_, cy_ = cx_ * 0.35 + nx * 0.65, cy_ * 0.35 + ny * 0.65  # smooth
+                if mv > 0.7:  # slowly refresh the template so it survives turns
+                    ix, iy = int(cx_ - tw / 2), int(cy_ - th / 2)
+                    if 0 <= ix and 0 <= iy and ix + tw <= w and iy + th <= h:
+                        tpl = tpl * 0.85 + f[iy:iy + th, ix:ix + tw].astype(np.float32) * 0.15
+        pts.append([round(cx_ / w, 4), round(cy_ / h, 4)])
+    cache.write_text(json.dumps(pts))
+    print(f"[render] tracked box over {len(pts)} frames")
+    return pts
+
+
+def music_beats(plan: dict, s: float, e: float, work: Path) -> list[float]:
+    """Beat times (seconds from s) of the plan's music inside [s, e], via scripts/beats.py."""
+    import subprocess
+    au = plan.get("audio") or {}
+    mus = au.get("music")
+    mus = mus[0] if isinstance(mus, list) and mus else mus
+    if not mus or not mus.get("src"):
+        return []
+    off = parse_time(mus.get("start", 0)) - parse_time(mus.get("in", 0))  # timeline = music time + off
+    out = work / "track" / f"beats_{hashlib.md5(str(mus['src']).encode()).hexdigest()[:8]}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if not out.exists():
+        subprocess.run([sys.executable, str(Path(__file__).parent / "beats.py"), str(mus["src"]), "-o", str(out)], capture_output=True)
+    try:
+        b = json.loads(out.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    pick = b.get("strong") if len(b.get("strong") or []) >= 3 else b.get("beats") or []
+    return [round(t + off - s, 3) for t in pick if s <= t + off < e][:24]
 
 
 def audio_levels(base: Path, s: float, e: float, fps: int) -> list[float]:
@@ -810,6 +872,12 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
         return
     for o in items:
         o["props"] = resolve_stills(o.get("props", {}), work, canvas["width"])
+        if o.get("comp") == "TrackLabel" and isinstance(o["props"].get("track"), dict):
+            s, e = overlay_times(o, starts, total)
+            o["props"]["track"] = track_box(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work)
+        if o.get("comp") == "BeatText" and not o["props"].get("beats"):
+            s, e = overlay_times(o, starts, total)
+            o["props"]["beats"] = music_beats(plan, s, e, work)
         if o.get("comp") == "Audiogram" and not o["props"].get("levels"):
             s, e = overlay_times(o, starts, total)
             o["props"]["levels"] = audio_levels(work / "base.mp4", s, e, int(canvas.get("fps", 30)))
@@ -855,7 +923,7 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
         if o.get("type") == "frost":
             vlast = frost_layer(o, k, vlast, fc, starts, total, W, H)
             continue
-        if o.get("type") in vipfx.TYPES or (o.get("_motion") and (o.get("behind") or o.get("fill"))):
+        if o.get("type") in vipfx.TYPES or (o.get("_motion") and (o.get("behind") or o.get("fill") or o.get("blend"))):
             cx.n = n
             vlast = vipfx.apply(o, k, vlast, cx) if o.get("type") in vipfx.TYPES else vipfx.motion_special(o, k, vlast, cx)
             n = cx.n
@@ -1050,6 +1118,16 @@ def trend_layers(plan: dict, clips: list[dict], starts: list[float], total: floa
             whips.append({"type": t["type"], "start": max(0, starts[i] - d / 2), "end": min(total, starts[i] + d / 2),
                           "_at": starts[i], "dir": t.get("dir", "left"), **lay})
     ovs[:0] = whips
+    for j in range(len(ovs) - 1, -1, -1):  # FocusText: the video starts soft and pulls into focus at "swap"
+        o = ovs[j]
+        if o.get("type") == "motion" and o.get("comp") == "FocusText" and not o.get("_frost"):
+            o["_frost"] = True
+            sw = float((o.get("props") or {}).get("swap", 1.4))
+            fr = {"type": "frost", "mode": "none", "blur": 34, "fade_in": 0.2, "fade_out": 0.55, "start": o.get("start", 0)}
+            if "clip" in o:
+                fr["clip"] = o["clip"]
+            fr["end"] = float(o.get("start", 0)) + sw + 0.55
+            ovs.insert(j, fr)
     # props sit in the room, so the relight grade must come after them (it then lights the plant / lamp too)
     rel = [o for o in ovs if o.get("type") == "relight"]
     if rel:

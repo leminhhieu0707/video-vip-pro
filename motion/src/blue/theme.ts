@@ -8,6 +8,7 @@ const fonts: Array<[string, string, string, string]> = [
   ['BVP', 'fonts/BeVietnamPro-Bold.ttf', '700', 'normal'],
   ['BVP', 'fonts/BeVietnamPro-ExtraBold.ttf', '800', 'normal'],
   ['PFI', 'fonts/PlayfairDisplay-Italic-VF.ttf', '400 900', 'italic'],
+  ['DSC', 'fonts/DancingScript-VF.ttf', '400 700', 'normal'],  // handwriting (OFL), Vietnamese
 ];
 for (const [family, file, weight, style] of fonts) {
   loadFont({family, url: staticFile(file), weight, style}).catch(() => undefined);

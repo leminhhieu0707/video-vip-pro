@@ -312,11 +312,56 @@ Three parts that work together; use them on talking-head footage shot in a flat 
 
 Typical studio recipe: `color_match` + `relight warm_cafe` + one plant on the side the speaker is not facing + one lamp on the other side.
 
+## TEXT pack (26 premium text effects, `src/blue/Text.tsx`)
+
+All are `{"type": "motion", "comp": NAME, "props": {...}}`; sizes auto-fit the frame width. Never on the face; keep them in empty wall / table areas.
+
+**Text in the room (needs a flag)**
+| comp | flag | props | look |
+|---|---|---|---|
+| `Text3D` | `"behind": true` | `text`, `sub`, `plane` wall/table, `ry`, `y` | Big extruded 3D words standing in the room; the speaker passes in front. |
+| `WeaveText` | (automatic) | `text`, `y` 0.56 (chest), `rx`, `ry`, `tilt` | A ribbon of text wrapping around the speaker; the back half goes behind them (RING_COMPS). Keep it below the face. |
+| `ProjectText` | `"blend": "overlay"` | `text`, `sub`, `y` | Text projected onto the wall: takes the wall's light and texture, flickers on. Other blend modes: softlight, screen, multiply (`blend_opacity`). Needs a mid-tone wall to show. |
+| `GlassText` | `"fill": "glass"` | `text`, `sub`, `y` | Frosted glass letters: the blurred video shows through, bright rim. |
+| `MarqueeRows` | `"behind": true` | `text`, `rows` 3, `y`, `speed` | Huge rows (solid / outline) sliding opposite ways behind the speaker. Fashion-ad look. |
+| `TrackLabel` | (render tracks) | `text`, `sub`, `track: {"box": [x, y, w, h]}` at the overlay start, `dx`, `dy` | Price / spec card on a leader line that follows a product or hand (template-matching tracker, cached). Pick a box with texture (the phone, the hand), not a plain wall. |
+| `FocusText` | (render adds the frost) | `text`, `sub`, `swap` 1.4 | Text sharp over a soft room, then focus pulls to the speaker and the text melts away (rack focus). |
+| `BeatText` | (render reads the music) | `text: "A|B|C"`, `beats` (auto from the plan's music via beats.py) | Words punching in on the beat; montages and music-only videos. |
+| `RiseText` | — | `text`, `sub`, `edge` (y of the table / box top), `x` | Rises from behind an edge and stays clipped by it. |
+| `MirrorText` | — | `text`, `sub`, `y` (the table line) | Standing on a glossy table with a soft reflection. |
+
+**Materials and motion**
+| comp | props | look |
+|---|---|---|
+| `MetalText` | `text`, `sub`, `metal` gold/silver/chrome/red, `sweepAt` | Extruded metal letters with one light sweep. Prices, titles, thumbnails (red-gold brands). |
+| `NeonText` | `text`, `color`, `script` | Neon sign switching on with flicker, then humming. |
+| `WriteOn` | `text`, `dur` 1.4, `underline` | Handwritten (Dancing Script, Vietnamese) signature drawing itself, then a flourish. Shop name, sign-off. |
+| `SliceText` | `text`, `slices` 4 | Bands slide in from alternate sides and lock together. |
+| `WeightPulse` | `text` with one `**keyword**` | A caption whose keyword thickens and grows as it is said. Subtle emphasis. |
+| `DustText` | `text`, `dustAt` | Text blows away into dust ("hết hàng", "biến mất"). |
+| `PunchWord` | `word`, `hold` 0.3, `y` | One word fills the screen, then shrinks into place. Hype only, max once per video. |
+| `CubeFlip` | `words[]`, `prefix`, `step` | Words on a 3D cube flipping to the next ("iPhone ở đây RẺ → BỀN → XỊN"). |
+| `InkText` | `text`, `script` | Text bleeding out of an ink blot. F&B, heritage, stories. |
+| `RaysTitle` | `title`, `sub` | Poster title with light rays behind it. Openings, chapters. |
+
+**Numbers, documents, channels**
+| comp | props | look |
+|---|---|---|
+| `Odometer` | `value`, `unit`, `label`, `dur` 1.3 | Digits roll like a mechanical counter and land left to right, then kaching. Price reveals (premium alternative to CountUp). |
+| `SealBadge` | `ring`, `center`, `sub`, `x`, `y`, `size` | Round seal with slowly rotating ring text ("GIẢM GIÁ • HSSV •") and a centre value. |
+| `DocLabel` | `place`, `date`, `sub`, `x`, `y` | Documentary place / date line typed out under a drawn rule (HST, Dam Case, Rise & Ruin). |
+| `QuoteCard` | `quote`, `who`, `source` | Big quote marks, the quote appearing word by word, who said it. Never invent quotes: only words from the footage or a cited source. |
+| `RansomText` | `text`, `cps` | Each letter cut from a different newspaper scrap. Drama / gossip channels. |
+| `AIChat` | `prompt`, `answer`, `name` "Claude", `wps` | A prompt bubble, "thinking" dots, then the AI answer streaming word by word with a cursor. AI channel. |
+| `DecodeText` / `NameTag` / `PriceSlash` | see the TREND packs | |
+
+Picks by channel: shop → MetalText, Odometer, SealBadge, CubeFlip, TrackLabel, MirrorText; HST / documentaries → DocLabel, QuoteCard, FocusText, RaysTitle, InkText; MH / drama → RansomText, PunchWord, DustText; AI channel → AIChat, NeonText, GlassText, DecodeText; premium brand → Text3D behind, WeaveText, WriteOn, GlassText.
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.
   - `Rich.tsx`: text markup.
-  - `Blue.tsx` / `Vip.tsx` / `Pro.tsx` / `Trend.tsx`: the comps.
+  - `Blue.tsx` / `Vip.tsx` / `Pro.tsx` / `Trend.tsx` / `Text.tsx`: the comps.
   - `Root.tsx`: the registry.
   - Studio: `cd motion && npx remotion studio src/index.ts`.
 - **`motion/render_motion.py COMP '<props json>' --duration 3 [--still 1.5 -o x.png]`:** renders one item. Use stills to check a design.

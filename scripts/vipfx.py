@@ -1034,14 +1034,39 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     return vlast
 
 
+BLEND_BASE = {"overlay": "gray", "softlight": "gray", "hardlight": "gray", "screen": "black", "addition": "black",
+              "lighten": "black", "multiply": "white", "darken": "white"}
+
+
 def motion_special(o: dict, k: int, vlast: str, cx: Ctx) -> str:
-    """Motion overlay (already rendered .mov) with "behind": true or "fill": "video"."""
+    """Motion overlay (already rendered .mov) with "behind": true, "fill": "video" | "glass", or "blend": mode."""
     s, e = times(o, cx.starts, cx.total)
     W, H, fc = cx.W, cx.H, cx.fc
     i = cx.add_input(["-i", str(o["src"])])
     fc.append(f"[{i}:v]format=rgba,setpts=PTS-STARTPTS+{s:.3f}/TB[mv{k}]")
+    if o.get("blend"):
+        # the comp takes the light and texture of what is under it (text projected on a wall): put it on the blend
+        # mode's neutral colour, then blend in RGB so chroma is not shifted
+        mode = str(o["blend"])
+        neutral = {"gray": "0x808080", "black": "black", "white": "white"}[BLEND_BASE.get(mode, "gray")]
+        op = float(o.get("blend_opacity", 1.0))
+        fc.append(f"color=c={neutral}:s={W}x{H}:r={cx.fps},trim=duration={e - s + 0.2:.3f},setpts=PTS-STARTPTS+{s:.3f}/TB,format=rgba[mn{k}]")
+        fc.append(f"[mn{k}][mv{k}]overlay=0:0:shortest=1,format=gbrp[ml{k}]")
+        fc.append(f"{vlast}split=2[mw{k}][mc{k}]")
+        base = cx.cut(f"[mc{k}]", s, e, f"[mb{k}]")
+        fc.append(f"{base}format=gbrp[mbg{k}];[mbg{k}][ml{k}]blend=all_mode={mode}:all_opacity={op},format=yuv420p[mx{k}]")
+        return _over(cx, f"[mw{k}]", f"[mx{k}]", s, e, k, "m")
     fc.append(f"{vlast}split=2[mw{k}][mc{k}]")
     vlast, clean = f"[mw{k}]", f"[mc{k}]"
+    if o.get("fill") == "glass":
+        # frosted glass letters: the comp's shape shows a blurred, brightened copy of the video; its own rim on top
+        vz = cx.cut(clean, s, e, f"[mz{k}]")
+        fc.append(f"{vz}scale={W // 4}:{H // 4},gblur=sigma={float(o.get('glass_blur', 9)):.1f},scale={W}:{H},"
+                  f"eq=brightness=0.08:saturation=1.1,drawbox=c=white@0.12:t=fill,format=rgba[mzz{k}]")
+        fc.append(f"[mv{k}]split=2[mva{k}][mvb{k}];[mva{k}]alphaextract,lut=y='if(gt(val,8),255,0)',gblur=sigma=0.8[ma{k}];"
+                  f"[mzz{k}][ma{k}]alphamerge[mf{k}]")
+        v = _over(cx, vlast, f"[mf{k}]", s, e, k, "m")
+        return _over(cx, v, f"[mvb{k}]", s, e, k, "r")
     if o.get("fill") == "video":
         z = float(o.get("fill_zoom", 1.25))
         fc.append(f"{clean}split=2[mca{k}][mcb{k}]")
