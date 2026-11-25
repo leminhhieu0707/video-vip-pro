@@ -73,6 +73,7 @@ INTENTS = {  # matched on lowercase text WITH accents (proofread transcripts); k
     "turn": r"^(nhưng|tuy nhiên|thế nhưng|yên tâm|đừng lo|vậy thì|mà khoan|khoan đã|chưa hết|đặc biệt|không chỉ)(?!\w)|đâu chỉ",
     "intro": r"(?<!\w)(xin chào|chào các|mình là|em là|tôi là|anh là)(?!\w)",
     "joke": r"(?<!\w)(haha|hihi|đùa thôi|cà khịa|trời đất)(?!\w)",
+    "process": r"(?<!\w)(bước|quy trình|lộ trình|giai đoạn|từ khâu|đồng hành từ|từ bước)(?!\w)",
 }
 PRICE_RE = re.compile(r"(\d{1,3}(?:[.,]\d{3})+)\s*(đ|đồng|vnđ|k)?|(\d+(?:[.,]\d+)?)\s*(triệu|tr|củ|nghìn|ngàn|k|tỷ)\b(\s*\d{1,3})?", re.I)
 YEAR_RE = re.compile(r"\b(19[5-9]\d|20[0-4]\d)\b")
@@ -241,6 +242,17 @@ def read(sent: dict, n_total: int) -> dict:
     body = gm.group(1) if gm and ("," in gm.group(1) or " và " in gm.group(1)) else t
     parts = [p.strip(" .!") for p in re.split(r"[,;]| và ", body) if p.strip(" .!")]
     short_items = [p for p in parts if 1 <= len(p.split()) <= (4 if gm else 2)]
+    if "process" in tags:  # "đồng hành từ bước nghiên cứu thị trường, insight khách hàng, … và lên kế hoạch tổng thể"
+        steps = []
+        for p in parts:
+            m2 = re.search(r"(?:từ bước|từ khâu|bắt đầu từ|từ|bước|gồm|là)\s+(.+)$", p, re.I)
+            if len(p.split()) > 5 and m2:
+                p = m2.group(1)
+            p = re.sub(r"^(cho tới khi|cho đến khi|tới khi|đến khi|rồi|sau đó|cuối cùng là|cuối cùng)\s+", "", p, flags=re.I)
+            if 1 <= len(p.split()) <= 5:
+                steps.append(p)
+        if len(steps) >= 3:
+            short_items = steps
     energy = len(tags & {"shock", "price", "discount", "question", "quality"}) + (1 if "!" in t else 0)
     return {"tags": sorted(tags), "prices": ps, "year": (YEAR_RE.search(t).group(0) if YEAR_RE.search(t) else None),
             "product": prod.group(0) if prod else None, "list_n": int(n_list.group(1)) if n_list else None,
@@ -516,6 +528,92 @@ def build(name: str, sent: dict, info: dict, a: dict, ctx: dict) -> list[dict] |
     return None
 
 
+def two_lines(item: str) -> tuple[str, str]:
+    """"insight khách hàng" -> ("INSIGHT", "KHÁCH HÀNG"): the last two syllables (one Vietnamese word) go on line 2."""
+    w = item.upper().split()
+    if len(w) <= 2:
+        return " ".join(w), ""
+    return " ".join(w[:-2]), " ".join(w[-2:])
+
+
+def hud_chapter(sents: list[dict], infos: list[dict], i: int, ctx: dict) -> tuple[list[dict], int] | None:
+    """Full-screen HUD chapter over a process / roadmap enumeration (sentence i, plus the next one while it keeps listing).
+    Returns (layers, index of the last sentence covered)."""
+    # Whisper splits one long list over several "sentences": keep joining while the text runs on (no . ! ?) or the
+    # next one is itself a list, up to 3 sentences
+    j = i
+    while (j + 1 < len(sents) and j - i < 2 and sents[j + 1]["start"] - sents[j]["end"] < 0.6
+           and (not re.search(r"[.!?…]\s*$", sents[j]["text"]) or len(infos[j + 1]["items"]) >= 2)):
+        j += 1
+    merged = {"i": sents[i]["i"], "start": sents[i]["start"], "end": sents[j]["end"],
+              "text": " ".join(sents[k]["text"].strip() for k in range(i, j + 1)), "words": [w for k in range(i, j + 1) for w in sents[k]["words"]]}
+    info = read(merged, 10 ** 6)
+    items: list[tuple[float, str]] = [(word_time(merged, it), it) for it in info["items"]][:6]
+    # trim trailing sentences that add no step
+    while j > i and items and sents[j]["start"] > items[-1][0] + 0.5 and sents[j]["end"] - items[-1][0] > 4:
+        j -= 1
+    s, e = sents[i]["start"], sents[j]["end"]
+    if len(items) < 3 or e - s < 3.5:
+        return None
+    broll = ctx.get("broll") or []
+    scenes = []
+    if items[0][0] - s > 1.2:  # a lead-in ("không chỉ quay vài video cho có, …") gets an intro scene first
+        scenes.append({"at": 0, "kicker": (ctx["brand"] or "QUY TRÌNH").upper(), "title": "LỘ TRÌNH", "title2": f"{len(items)} BƯỚC", "box": True,
+                       "card": "none", "chapter": "01 — Giới thiệu", "tone": "light"})
+    for n, (t, it) in enumerate(items):
+        a, b = two_lines(it)
+        sc = {"at": round(max(0.0, t - s), 2) if (scenes or n) else 0.0, "step": f"{n + 1:02d}/{len(items):02d}", "title": a, "title2": b,
+              "chapter": f"{(n + 2) if scenes and scenes[0].get('kicker') else (n + 1):02d} — Bước {n + 1}"}
+        if broll:
+            src = broll[n % len(broll)]
+            sc.update({"media": src, "card": "rec" if Path(src).suffix.lower() in (".mp4", ".mov", ".webm", ".m4v") else "browser"})
+        else:
+            sc["card"] = "none"
+        scenes.append(sc)
+    for k in range(1, len(scenes)):  # each scene needs ≥ 0.9 s or its letters never settle
+        scenes[k]["at"] = round(max(scenes[k]["at"], scenes[k - 1]["at"] + 0.9), 2)
+    if scenes[-1]["at"] > e - s - 0.8:
+        return None
+    lay = [{"type": "motion", "comp": "HudChapter", "start": s, "end": e,
+            "props": {"brand": ctx["brand"] or "STUDIO", "footer": ctx.get("footer", ""), "tc": round(s, 2), "scenes": scenes,
+                      "marquee": " ✦ ".join(two_lines(x[1])[1] or x[1].upper() for x in items[:4])}}]
+    return lay, j
+
+
+def neon_tunnel(sent: dict, ctx: dict) -> tuple[list[dict], bool] | None:
+    """Full-screen neon tunnel on an early question, B-roll clips flying in a phone (needs ≥ 2 B-roll files)."""
+    broll = ctx.get("broll") or []
+    s, e = sent["start"], sent["end"]
+    if len(broll) < 2 or e - s < 2.0:
+        return None
+    w = sent["text"].strip().split()
+    script, rest = (w[0].strip(","), w[1:]) if len(w) > 4 and len(w[0]) <= 6 else ("", w)
+    lines, cur = [], ""
+    for x in rest:  # greedy wrap ~24 characters a line, at most 4 lines (the comp shrinks the text past 3)
+        if cur and len(cur) + 1 + len(x) > 24:
+            lines.append(cur)
+            cur = x
+        else:
+            cur = f"{cur} {x}".strip()
+    lines.append(cur)
+    text = "\n".join(lines[:4]) + ("…" if len(lines) > 4 else "")
+    title, title_at = None, None
+    nxt = ctx.get("_next")
+    if nxt and "question" in nxt[1]["tags"] and nxt[0]["start"] - e < 0.6 and len(nxt[0]["text"].split()) <= 14:
+        # a second, shorter question right after ("do sản phẩm tốt hay do video quá đẹp?"): its tail becomes the big title
+        title = " ".join(nxt[0]["text"].strip().split()[-4:]).upper()
+        title_at = round(nxt[0]["start"] - s, 2)
+        e = nxt[0]["end"]
+    n = min(3, len(broll))
+    step = (e - s) / n
+    props = {"script": script[:1].upper() + script[1:], "text": text, "items": [{"src": broll[k], "at": round(k * step, 2)} for k in range(n)]}
+    if title:
+        props.update({"title": title, "titleAt": title_at})
+    if ctx.get("logo"):
+        props["logo"] = ctx["logo"]
+    return [{"type": "motion", "comp": "NeonTunnel", "start": s, "end": e, "props": props}], bool(title)
+
+
 # ------------------------------------------------------------------ camera
 CAM = {
     "HOOK": lambda f: {"zooms": [{"at": 0, "to": 1.32, "in": 0, "hold": 0.08, "out": 0.32, "x": f[0], "y": f[1]}]},
@@ -552,7 +650,7 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     target = max(2, round(total / 30 * dens))
     theme = opt.theme if opt.theme != "auto" else (a.get("brand_theme") or theme_fb)
     free_side = "right" if (1 - a["person"][2]) >= a["person"][0] else "left"
-    ctx = {"brand": opt.brand or "", "style": style, "free_side": free_side,
+    ctx = {"brand": opt.brand or "", "style": style, "free_side": free_side, "broll": broll_files(opt.broll), "logo": opt.logo or "",
            "metal": "red" if theme == "red" else ("silver" if theme in ("blue", "mono", "sky") else "gold"),
            "price_label": ""}
     # score every (sentence, effect)
@@ -605,6 +703,30 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
             picks[0] = {"name": "DecodeText", "why": "hook: keyword reveal", "layers": hook}
     if 0 in picks:
         last_hero.append(s0["start"])
+    # HUD pack: a process / roadmap list becomes a full-screen chapter; an early question gets the neon tunnel (needs B-roll)
+    if opt.hud != "off":
+        for i in range(1, len(sents)):
+            if "process" in infos[i]["tags"] or (len(infos[i]["items"]) >= 3 and "list" in infos[i]["tags"]):
+                got = hud_chapter(sents, infos, i, ctx)
+                if got:
+                    lay, j = got
+                    picks[i] = {"name": "HudChapter", "why": "process list -> full-screen HUD chapter", "layers": lay}
+                    for k in range(i + 1, j + 1):
+                        picks[k] = {"name": "HudChapter", "why": "(continues)", "layers": []}
+                    last_hero.append(sents[i]["start"])
+                    break
+        for i in range(1, min(5, len(sents))):
+            if i in picks or "question" not in infos[i]["tags"]:
+                continue
+            ctx["_next"] = (sents[i + 1], infos[i + 1]) if i + 1 < len(sents) and i + 1 not in picks else None
+            got = neon_tunnel(sents[i], ctx)
+            if got:
+                lay, two = got
+                picks[i] = {"name": "NeonTunnel", "why": "early question + B-roll -> neon tunnel", "layers": lay}
+                if two:
+                    picks[i + 1] = {"name": "NeonTunnel", "why": "(continues)", "layers": []}
+                last_hero.append(sents[i]["start"])
+                break
     for sc, i, name, hero, zone in cands:
         if len(picks) >= target:
             break
@@ -643,7 +765,7 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     for i in range(1, len(sents)):
         if i in cam:
             continue
-        if picks.get(i, {}).get("name") in ("popout", "dolly", "frost", "GiantCaption"):
+        if picks.get(i, {}).get("name") in ("popout", "dolly", "frost", "GiantCaption", "HudChapter", "NeonTunnel"):
             cam[i] = "STILL"
             continue
         mv = cyc[c % len(cyc)]
@@ -671,6 +793,8 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
         studio["color_match"] = True
     caps = []
     for s, info in zip(sents, infos):
+        if picks.get(s["i"], {}).get("name") in ("HudChapter", "NeonTunnel"):  # full-screen graphics carry their own words
+            continue
         caps += captions(s, info)
     loop = (opt.aspect == "9:16" and total < 75)
     return {"industry": ind, "style": style, "theme": theme, "density_target": target, "sentences": [
@@ -710,6 +834,17 @@ def to_plan(ar: dict, a: dict, b: dict, opt, root: Path) -> dict:
     return plan
 
 
+def broll_files(spec: str | None) -> list[str]:
+    """--broll: a folder (its videos and images, sorted) or a comma-separated list of files."""
+    if not spec:
+        return []
+    p = Path(spec)
+    ext = {".mp4", ".mov", ".webm", ".m4v", ".png", ".jpg", ".jpeg", ".webp"}
+    if p.is_dir():
+        return [str(f.resolve()) for f in sorted(p.iterdir()) if f.suffix.lower() in ext]
+    return [str(Path(x.strip()).resolve()) for x in spec.split(",") if x.strip() and Path(x.strip()).suffix.lower() in ext]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("aroll", help="edited/aroll.json from aroll.py")
@@ -720,6 +855,9 @@ def main():
     ap.add_argument("--density", default="normal", choices=["calm", "normal", "rich"])
     ap.add_argument("--studio", default="auto", choices=["auto", "on", "off"])
     ap.add_argument("--comedy", action="store_true")
+    ap.add_argument("--broll", default=None, help="folder or comma list of B-roll clips / screenshots (HUD chapter cards, neon tunnel)")
+    ap.add_argument("--logo", default=None, help="logo image for the neon tunnel")
+    ap.add_argument("--hud", default="auto", choices=["auto", "off"], help="full-screen HUD chapter on a process list (off = never)")
     ap.add_argument("--seed", type=int, default=0, help="change it to get a different but equally valid pick")
     ap.add_argument("-o", "--out", default=None)
     ap.add_argument("--plan", default=None, help="also write a complete plan_vip.json")

@@ -5,6 +5,7 @@ import {VIP_COMPS} from './blue/Vip';
 import {PRO_COMPS} from './blue/Pro';
 import {TREND_COMPS} from './blue/Trend';
 import {TEXT_COMPS} from './blue/Text';
+import {HUD_COMPS} from './blue/Hud';
 
 const FPS = 30;
 
@@ -38,7 +39,7 @@ export const Root: React.FC = () => (
       defaultProps={{duration: 3}} />
     <Composition id="FollowCard" component={FollowCard as React.FC<any>} {...common}
       defaultProps={{duration: 3}} />
-    {Object.entries({...VIP_COMPS, ...PRO_COMPS, ...TREND_COMPS, ...TEXT_COMPS}).map(([id, comp]) => (
+    {Object.entries({...VIP_COMPS, ...PRO_COMPS, ...TREND_COMPS, ...TEXT_COMPS, ...HUD_COMPS}).map(([id, comp]) => (
       <Composition key={id} id={id} component={comp} {...common} defaultProps={{duration: 3}} />
     ))}
   </>

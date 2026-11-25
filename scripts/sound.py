@@ -230,6 +230,21 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
         return [(f("camera", "flash"), float(props.get("swap", 1.4)), 0.14)]
     if comp == "BeatText":
         return [(f("hit", "thump"), float(b), 0.1) for b in (props.get("beats") or [])[:16]]
+    if comp == "HudChapter":  # a whoosh per scene change (letters fly in), a click when a card lands, a pop per chip
+        out = []
+        sc = props.get("scenes") or []
+        for i, s in enumerate(sc[:8]):
+            at = float(s.get("at", (dur / max(1, len(sc))) * i))
+            out.append((f("whoosh", "dwhoosh"), max(0.0, at - 0.05), 0.15))
+            if s.get("card", "none") != "none" or s.get("media"):
+                out.append((f("click", "vclick"), at + 0.45, 0.12))
+            for ci, c in enumerate((s.get("chips") or [])[:3]):
+                out.append((f("pop", "popup"), at + float(c.get("at", 0.6 + ci * 0.35) if isinstance(c, dict) else 0.6 + ci * 0.35), 0.12))
+        return out
+    if comp == "NeonTunnel":  # rush in, a swipe on every clip swap, a hit when the big title lands
+        out = [(f("riser", "charge"), 0.0, 0.12), (f("whoosh", "dwhoosh"), 0.3, 0.16)]
+        out += [(f("swipe", "dwhoosh"), float(it.get("at", 0)), 0.14) for it in (props.get("items") or [])[1:4] if isinstance(it, dict)]
+        return out + ([(f("hit", "thump"), float(props.get("titleAt", 0.6)), 0.18)] if props.get("title") else [])
     if comp == "MapPin":
         at, fly = float(props.get("at", 0)), float(props.get("fly", 1.1))
         return [(f("whoosh", "dwhoosh"), at, 0.16), (f("pop", "popup"), at + fly - 0.05, 0.18), (f("ding", "popup"), at + fly + 0.3, 0.12)]

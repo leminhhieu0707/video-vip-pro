@@ -357,6 +357,29 @@ All are `{"type": "motion", "comp": NAME, "props": {...}}`; sizes auto-fit the f
 
 Picks by channel: shop → MetalText, Odometer, SealBadge, CubeFlip, TrackLabel, MirrorText; HST / documentaries → DocLabel, QuoteCard, FocusText, RaysTitle, InkText; MH / drama → RansomText, PunchWord, DustText; AI channel → AIChat, NeonText, GlassText, DecodeText; premium brand → Text3D behind, WeaveText, WriteOn, GlassText.
 
+## HUD pack (agency motion-graphics chapters, `src/blue/Hud.tsx`)
+
+Measured on a top "xây kênh TikTok" agency reel (11/2026): the talking head stops for 10–18 s and the voice runs over full-screen graphics. Both comps are **full-screen and opaque** (the speaker is hidden, the voice keeps playing), so put them on a voice-over stretch, never on a line where the face matters, and use **one of each per video at most**.
+
+| comp | props | use |
+|---|---|---|
+| `HudChapter` | `scenes: [{at, title, title2, box, kicker, script, step, chapter, card, media, chips, tone, sub}]`, `brand`, `footer`, `tc` (timecode start, s), `marquee`, `size` 128 | A run of scenes inside one HUD frame: corner brackets, `brand •` top-left, a running timecode top-right, the chapter label bottom-left (`"03 — Lộ trình"`), the footer bottom-right (`"Xây kênh 2026"`). Each title's letters fly in scattered (spun in 3D, blurred) and lock into place, then fly away into the next scene while the background cross-fades. `title2` is in the brand colour, `box: true` wipes a brand box behind it. `step: "01/04"` adds a "BƯỚC 01 / 04" pill and a progress bar. `card`: `browser` (screenshot in a browser window), `phone`, `rec` (B-roll with REC dot, timecode, focus square and `sub` label), `plain`, `clap` (clapperboard that snaps shut, `sub` lines with `\n`), `target` (crosshair rings), `none` (big centred title). `media` = image **or video** (B-roll plays muted from the moment its card lands). `chips` = floating pills around the card. `tone`: `light` / `brand` / `dark`, default rotation light → brand → light → dark. Process / roadmap lists ("từ bước nghiên cứu thị trường, insight khách hàng, …"), service packages, "quy trình 4 bước". |
+| `NeonTunnel` | `items: [{src, at}]` (B-roll / screenshots), `color` '#FF5A1F', `logo`, `script` ("Vậy"), `text` (lines with `\n`), `title` ("DO VIDEO QUÁ ĐẸP?"), `titleAt`, `fly` 0.9 | Dark neon tunnel: perspective lines rush past, zig-zag light pulses, a phone flies in from the vanishing point and flips to the next clip on each `at`. Logo glow + serif script word | question on top, the big title's letters assemble on `titleAt`. The neon keeps its own colour (contrast with any brand). The hook question ("làm thế nào mà…?") right after the opening proof. |
+
+The edit brain places them by itself: `HudChapter` on the first process / roadmap list with ≥ 3 steps (it joins the Whisper pieces of one long list, splits each step into two lines, e.g. "NGHIÊN CỨU / THỊ TRƯỜNG", and adds a "LỘ TRÌNH / N BƯỚC" intro when the sentence has a lead-in); `NeonTunnel` on an early question, only when `--broll` gives ≥ 2 files, and a short second question right after becomes its big title. Captions are skipped under both. Without `--broll` the HUD scenes use `card: "none"`; with it, videos go into `rec` cards and images into `browser` cards. Ask the user for real B-roll (team at work, channel screenshots, results): AI pictures look fake in these cards.
+
+Sounds follow the props automatically (a whoosh per scene, a click when a card lands, a pop per chip; neon: riser + whoosh, a swipe per clip swap, a hit on the title).
+
+```json
+{"type": "motion", "comp": "HudChapter", "start": 34.4, "end": 49.0, "props": {"brand": "Viral Network", "footer": "Xây kênh 2026", "tc": 34.4,
+ "marquee": "CONTENT ✦ INSIGHT ✦ KẾ HOẠCH", "scenes": [
+  {"at": 0, "kicker": "VÀ ĐÓ LÀ LÝ DO", "title": "GÓI XÂY", "title2": "KÊNH", "box": true, "chapter": "01 — Giới thiệu"},
+  {"at": 2.2, "kicker": "CHÚNG MÌNH SẼ", "title": "ĐỒNG HÀNH", "card": "rec", "media": "broll/team.mp4", "sub": "KOC / KOL", "chips": ["TEAM QUAY"], "tone": "brand"},
+  {"at": 4.6, "step": "01/04", "title": "NGHIÊN CỨU", "title2": "THỊ TRƯỜNG", "card": "browser", "media": "broll/kenh.png", "chapter": "03 — Lộ trình"},
+  {"at": 8.6, "kicker": "SẢN XUẤT", "title": "HÌNH ẢNH", "title2": "CHỈN CHU", "card": "clap", "sub": "PROD — VIRAL NETWORK\nSCENE 05 · TAKE 03", "tone": "dark"},
+  {"at": 10.6, "script": "truyền thông", "title": "ĐÚNG TỆP", "title2": "KHÁCH HÀNG", "card": "target"}]}}
+```
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.
