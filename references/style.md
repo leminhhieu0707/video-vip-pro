@@ -380,6 +380,22 @@ Sounds follow the props automatically (a whoosh per scene, a click when a card l
   {"at": 10.6, "script": "truyền thông", "title": "ĐÚNG TỆP", "title2": "KHÁCH HÀNG", "card": "target"}]}}
 ```
 
+## ESTATE pack (real estate on real data: `scripts/geo.py` + `src/blue/Estate.tsx`)
+
+**Real map, real numbers.** Never draw a made-up map or guess a distance for a real project: build it with `geo.py`.
+
+1. Write `spec.json` (see the docstring of `geo.py`): `site` as `{"osm": "Vinhomes Làng Vân, Đà Nẵng"}` (boundary from OpenStreetMap, if mapped), `{"ring": [[lat, lon], …]}` (from the user / Google Maps), or `{"vn2000": {"meridian": 107.75, "points": [[X, Y], …]}}` (the coordinate table on the sổ đỏ, VN-2000 TM3, X = northing; province meridians: Đà Nẵng 107.75, Quảng Nam 107.75, HCM 105.75, Hà Nội 105.0, Bình Dương 105.75, Khánh Hòa 108.25 — check the sổ đỏ). `pois` with `"route": true` get the real driving route, km and minutes (OSRM). `levels` [10, 12, 14, 16] for a city → site fly-in; [14, 16, 18] for a single plot. `camera` keys sketch the moves; each comp overrides them.
+2. `python -X utf8 scripts/geo.py build spec.json -o edited/geo` → `geomap.json` + one satellite mosaic per zoom level (tiles cached in `.cache/tiles`). Read its report: area, edges, km, minutes.
+3. Put `geomap.json`'s keys into a `GeoMap` overlay's `props` (one GeoMap per shot, each with its own `camera`, in seconds from the overlay start; build the u/v of extra camera targets with `geo.merc(lat, lon)`).
+
+| comp | props | use |
+|---|---|---|
+| `GeoMap` | geomap.json keys + `camera` [{t, u, v, z, tilt, rot}], `site_at`, `site_draw` 2, `site_label`, `site_sub`, `routes` [{name, at, dur 1.6, dx, dy}], `pins_at`, `rings_at`, `color` gold, `fill`, `compass` | Satellite fly-in with Google-Earth tilt (haze on the horizon), the boundary draws with a glowing running light then fills, road routes draw to each amenity and a card pops "✈ Sân bay Đà Nẵng · 22,2 km · ~24 phút", km rings grow from the site, compass turns with the map, the imagery credit stays at the bottom. `dx` / `dy` nudge a card that overlaps another. |
+| `Building3D` | `buildings` [{pts (footprint in m, from the drawing), floors, fh 3.3, base, color, at}], `style` white / glass / wire, `yaw0` → `yaw1` (orbit), `pitch` 26, `zoom`, `dark`, `title`, `sub` | The footprint outline draws, then floors rise one by one with slabs and a window per bay, shadow on a grid, the camera orbits. Several blocks = a 3D masterplan (villas + tower). Label it "mô phỏng / minh hoạ" unless the user gave the real drawing. |
+| `FloorPlan2D` | `rooms` [{name, pts (m), color}], `extrude_at` (s; null keeps it 2D), `wall_h` 2.8, `yaw`, `dims`, `title`, `sub`, `dark` | Walls draw on, rooms fill with their name + m² (computed from the polygon), overall dimension lines, then the camera tilts into 3D and the walls rise (dollhouse). Rooms come from the user's bản vẽ (rectangles are enough: `[[x, y], …]` in metres from one corner). |
+
+Rules: distances and times on screen say "khoảng / ~" and the video carries a small "ước tính theo OSRM / OpenStreetMap" note; the imagery credit never leaves the frame; a site boundary taken from OpenStreetMap is labelled as such (it may be a construction zone, not the legal plot); numbers about a real project (area, investment, dates) come from news / official pages and the sources go on the end card. For a real developer's project, add "video minh hoạ, không phải quảng cáo của chủ đầu tư" unless the user is that developer. Imagery: `"source": "esri"` (free with the credit) or `"mapbox"` with `MAPBOX_TOKEN` for commercial work; never Google tiles. Sounds follow the props (fly-in whoosh, sparkle when the boundary closes, pop per route card; pen + whoosh for the floor plan; pops as blocks rise).
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.

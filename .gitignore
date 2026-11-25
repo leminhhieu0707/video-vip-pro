@@ -11,3 +11,4 @@ motion/public/_in/
 *.f32
 assets/sfx/pack/
 assets/sfx/mine/
+.cache/

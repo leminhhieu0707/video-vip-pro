@@ -241,6 +241,19 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
             for ci, c in enumerate((s.get("chips") or [])[:3]):
                 out.append((f("pop", "popup"), at + float(c.get("at", 0.6 + ci * 0.35) if isinstance(c, dict) else 0.6 + ci * 0.35), 0.12))
         return out
+    if comp == "GeoMap":  # fly-in whoosh, a sparkle when the boundary closes, a pop on each route card, a ding on the rings
+        out = [(f("whoosh", "dwhoosh"), 0.0, 0.14)]
+        if props.get("site_at") is not None:
+            out.append((f("sparkle", "flash"), float(props["site_at"]) + float(props.get("site_draw", 2)), 0.14))
+        out += [(f("pop", "popup"), float(r.get("at", 0)) + float(r.get("dur", 1.6)), 0.14) for r in (props.get("routes") or [])[:5]]
+        out += [(f("pop", "popup"), float(props["pins_at"]) + 0.05, 0.12)] if props.get("pins_at") is not None else []
+        return out + ([(f("ding", "popup"), float(props["rings_at"]) + 0.3, 0.1)] if props.get("rings_at") is not None else [])
+    if comp == "Building3D":  # outline swipe, then a soft pop as each block starts rising
+        out = [(f("swipe", "dwhoosh"), 0.0, 0.12)]
+        return out + [(f("pop", "popup"), float(b.get("at", 0)) + 0.4, 0.1) for b in (props.get("buildings") or [])[:6]]
+    if comp == "FloorPlan2D":  # walls drawn with a pen, rooms pop, whoosh as it tilts into 3D
+        out = [(f("pen", "data"), 0.15, 0.12), (f("pop", "popup"), 1.25, 0.12)]
+        return out + ([(f("whoosh", "dwhoosh"), float(props["extrude_at"]), 0.16)] if props.get("extrude_at") is not None else [])
     if comp == "NeonTunnel":  # rush in, a swipe on every clip swap, a hit when the big title lands
         out = [(f("riser", "charge"), 0.0, 0.12), (f("whoosh", "dwhoosh"), 0.3, 0.16)]
         out += [(f("swipe", "dwhoosh"), float(it.get("at", 0)), 0.14) for it in (props.get("items") or [])[1:4] if isinstance(it, dict)]

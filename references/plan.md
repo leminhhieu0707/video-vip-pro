@@ -173,7 +173,7 @@ With `bg` set, the text sits in a box. Without it, the text is outlined. `\n` ma
 ```json
 {"type": "motion", "comp": "BlueText", "start": 2.76, "end": 5.1, "props": {"top": "giờ có cái con AI này", "text": "nó **edit hết** _cho mọi người_", "y": 0.75}}
 ```
-Rendered to a cached transparent clip of exactly the overlay's length and laid over the frame. Comps: `BlueText`, `BlueBig`, `Tiles`, `Checklist`, `ScreenCard`, `NumberTitle`, `FollowCard`. Full props and markup in `style.md`. Full-screen agency chapters: `HudChapter` and `NeonTunnel` (HUD pack in `style.md`); their `media` / `items` accept videos as well as images.
+Rendered to a cached transparent clip of exactly the overlay's length and laid over the frame. Comps: `BlueText`, `BlueBig`, `Tiles`, `Checklist`, `ScreenCard`, `NumberTitle`, `FollowCard`. Full props and markup in `style.md`. Real estate on real maps: `GeoMap`, `Building3D`, `FloorPlan2D` (ESTATE pack in `style.md`, data from `scripts/geo.py`). Full-screen agency chapters: `HudChapter` and `NeonTunnel` (HUD pack in `style.md`); their `media` / `items` accept videos as well as images.
 
 ### frost: frosted-glass scene
 ```json
