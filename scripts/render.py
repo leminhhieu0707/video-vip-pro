@@ -879,7 +879,8 @@ def prepare_footage(plan: dict, starts: list[float], total: float, canvas: dict,
             fr = work / "frames" / f"dn_{at:.2f}.jpg"
             fr.parent.mkdir(parents=True, exist_ok=True)
             run([FFMPEG, "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(work / "base.mp4"), "-frames:v", "1", "-q:v", "2", str(fr)])
-            night = footage.day_to_night(fr, work / "frames" / f"night_{at:.2f}_{hashlib.md5(str(o.get('prompt')).encode()).hexdigest()[:6]}.jpg",
+            fh = hashlib.md5(fr.read_bytes() + str(o.get("prompt")).encode()).hexdigest()[:10]  # the frame itself, not just its time
+            night = footage.day_to_night(fr, work / "frames" / f"night_{at:.2f}_{fh}.jpg",
                                          footage.kie_key(plan.get("env")), o.get("prompt"))
             o.clear()
             o.update({"type": "image", "src": str(night), "start": s, "end": e, "pos": "center", "width": 1.0, "fade": float(o.get("fade", 1.6)), "sfx": None})

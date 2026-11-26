@@ -89,7 +89,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true,
   lots = [], lots_at, legend = true, site_edges = false, lift_at, lift_m = 4, roads = [], roads_at,
   look = 'luxury', handheld = 0, volna = false, focus_at, houses = [], follow, vector, basemap = 'satellite', vector_at = 0, streets_at,
-  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2'}) => {
+  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2', basemap_opacity = 0.7}) => {
   const {frame, fps, t, W, H} = useT();
   const cam = camAt(camera.length ? camera : [{t: 0, u: site.u ?? 0.5, v: site.v ?? 0.5, z: 14}], t);
   if (follow && t >= follow.from) { // camera rides along a route (bay dọc đường vào lô), road ahead pointing up the screen
@@ -145,7 +145,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
           imageRendering: 'auto'}} />;
       })}
       {basemap !== 'satellite' ? <div style={{position: 'absolute', inset: 0, background: basemap === 'light' ? '#EEF1F4' : '#08111F',
-        opacity: lerp(t, vector_at, vector_at + 0.8) * (basemap === 'blend' ? 0.7 : 1)}} /> : null}
+        opacity: lerp(t, vector_at, vector_at + 0.8) * (basemap === 'blend' ? basemap_opacity : 1)}} /> : null}
       {vector ? (() => {
         const vp = lerp(t, vector_at, vector_at + 1.0);
         const dark = basemap !== 'light';
@@ -369,7 +369,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
       })}
       {pins_at != null ? pois.filter((x: any) => !routes.find((r: any) => r.name === x.name)).map((poi: any, i: number) => {
         const p = spring({frame: frame - (pins_at + i * 0.2) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
-        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, `cách ${fmt(poi.km_air)} km`), `pp${i}`) : null;
+        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, `cách ${fmt(poi.km_air)} km`), `pp${i}`, poi.dx || 0, poi.dy || 0) : null;
       }) : null}
       {site_label && site_at != null ? (() => {
         const p = spring({frame: frame - (site_at + site_draw * 0.6) * fps, fps, config: {damping: 12, stiffness: 140, mass: 0.7}});
@@ -720,7 +720,7 @@ export const LotCard: React.FC<P> = ({duration, title = 'LÔ 01', rows = [], pri
         const p = lerp(t, at + 0.35 + i * step, at + 0.6 + i * step);
         return look === 'luxury' ? <div key={i} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 0',
           borderTop: `1px solid ${i ? 'rgba(255,255,255,0.22)' : color}`, opacity: p, transform: `translateX(${(1 - p) * 30}px)`}}>
-          <span style={{...LUX.cap, fontSize: 19, color: 'rgba(255,255,255,0.72)'}}>{r.k}</span><span style={{...LUX.num, fontSize: 40}}>{r.v}</span></div>
+          <span style={{...LUX.cap, fontSize: 23, color: 'rgba(255,255,255,0.78)'}}>{r.k}</span><span style={{...LUX.num, fontSize: 48}}>{r.v}</span></div>
           : <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.12)',
           opacity: p, transform: `translateX(${(1 - p) * 30}px)`, fontSize: 32}}>
           <span style={{color: 'rgba(255,255,255,0.7)', fontWeight: 600}}>{r.k}</span><span style={{fontWeight: 800}}>{r.v}</span></div>;
