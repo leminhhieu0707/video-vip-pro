@@ -18,6 +18,7 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
 | non-talking-head genres (montage, slideshow, tutorial, podcast) | the matching section of `references/recipes.md` |
 | starting the builder | run `scripts/fx_brain.py` (edit brain), then copy `templates/build_vip.py` |
 | real estate: a project, a plot, a house (map, location, distances, floor plan, 3D block) | `references/style.md` → "ESTATE pack", then `scripts/geo.py build` for the satellite map and `scripts/floorplan.py` when the user sends a drawing (bản vẽ / mặt bằng) |
+| real-estate footage (flycam, GES renders): plot / labels glued to the ground, sky, text behind buildings, day → night, masking transition | `references/style.md` → "ESTATE pro pack" (`scripts/footage.py`, `scripts/ges.py`) |
 
 ## One-call workflow (do all of it without asking, unless a choice really changes the result)
 1. **Brief.** Infer these:

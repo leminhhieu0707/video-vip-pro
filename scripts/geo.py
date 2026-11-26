@@ -111,7 +111,7 @@ def vn2000_to_wgs84(x_east: float, y_north: float, meridian: float, k0: float = 
 
 
 # ------------------------------------------------------------------ web services (cached)
-def _get(url: str, params: dict | None = None, binary: bool = False, wait: float = 0.0):
+def _get(url: str, params: dict | None = None, binary: bool = False, wait: float = 0.0, timeout: float = 30):
     import requests
     key = hashlib.md5((url + json.dumps(params or {}, sort_keys=True)).encode()).hexdigest()
     cf = CACHE.parent / "web" / key
@@ -119,11 +119,25 @@ def _get(url: str, params: dict | None = None, binary: bool = False, wait: float
         data = cf.read_bytes()
         return data if binary else json.loads(data.decode("utf-8"))
     time.sleep(wait)
-    r = requests.get(url, params=params, headers=UA, timeout=30)
+    r = requests.get(url, params=params, headers=UA, timeout=timeout)
     r.raise_for_status()
     cf.parent.mkdir(parents=True, exist_ok=True)
     cf.write_bytes(r.content)
     return r.content if binary else r.json()
+
+
+def _post(url: str, data: dict, timeout: float = 60):
+    """POST form (Overpass wants its query in the body), cached like _get."""
+    import requests
+    key = hashlib.md5((url + json.dumps(data, sort_keys=True)).encode()).hexdigest()
+    cf = CACHE.parent / "web" / key
+    if cf.exists():
+        return json.loads(cf.read_text(encoding="utf-8"))
+    r = requests.post(url, data=data, headers=UA, timeout=timeout)
+    r.raise_for_status()
+    cf.parent.mkdir(parents=True, exist_ok=True)
+    cf.write_bytes(r.content)
+    return r.json()
 
 
 def geocode(q: str, polygon: bool = False) -> dict | None:
@@ -359,11 +373,150 @@ def build(spec: dict, outdir: Path, W: int = 1080, H: int = 1920) -> dict:
                     outdir / f"level_z{z}.jpg", max_tiles=int(spec.get("max_tiles", 196)))
         levels.append(lv)
         print(f"[geo] z{z}: {int(lv['du'] * 2 ** z)}x{int(lv['dv'] * 2 ** z)} tiles -> {lv['src']}")
+    if spec.get("world"):  # whole-Earth texture for GlobeIntro (zoom 3, 8×8 tiles, Web-Mercator)
+        w = mosaic(src, 3, 0.0, 0.0, 0.9999, 0.9999, outdir / "world_z3.jpg", max_tiles=64)
+        res["world"] = w["src"]
+        print(f"[geo] địa cầu -> {w['src']}")
+    if spec.get("superres") and levels:  # one sharper level past the last real one, around the site (Lanczos ×2 + unsharp)
+        levels.append(superres_level(levels[-1], cu, cv, outdir, tiles=int(spec.get("superres_tiles", 6))))
+        print(f"[geo] z{levels[-1]['z']}: làm nét quanh lô -> {levels[-1]['src']}")
     res["levels"] = levels
     res["scale"] = S
+    if spec.get("vector"):
+        vs = spec["vector"] if isinstance(spec["vector"], dict) else {}
+        res["vector"] = osm_vector(c_lat, c_lon, float(vs.get("radius_m", 1500)), float(vs.get("buildings_m", 450)))
+        print(f"[geo] OSM: {len(res['vector']['roads'])} đường, {len(res['vector']['buildings'])} nhà, {len(res['vector']['water'])} mặt nước")
+    if spec.get("plans"):
+        res["plans"] = [plan_quad(pl, Path(spec.get("_root", "."))) for pl in spec["plans"]]
+    if spec.get("isochrone_min"):
+        res["iso"] = isochrones((c_lat, c_lon), [float(m) for m in spec["isochrone_min"]])
+        print(f"[geo] vùng phút: {[b['min'] for b in res['iso']]}")
     res["credit"] = SOURCES[src][1]
     (outdir / "geomap.json").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
     return res
+
+
+def superres_level(lv: dict, cu: float, cv: float, outdir: Path, tiles: int = 6) -> dict:
+    from PIL import Image, ImageFilter
+    im = Image.open(lv["src"])
+    W0, H0 = im.size
+    px = lambda u, v: ((u - lv["u0"]) / lv["du"] * W0, (v - lv["v0"]) / lv["dv"] * H0)
+    x, y = px(cu, cv)
+    half = tiles * 128
+    box = [int(max(0, x - half)), int(max(0, y - half)), int(min(W0, x + half)), int(min(H0, y + half))]
+    crop = im.crop(box).resize(((box[2] - box[0]) * 2, (box[3] - box[1]) * 2), Image.LANCZOS)
+    crop = crop.filter(ImageFilter.UnsharpMask(radius=2.2, percent=90, threshold=2))
+    out = outdir / f"level_z{lv['z'] + 1}_sr.jpg"
+    crop.save(out, quality=90)
+    return {"src": str(out), "z": lv["z"] + 1, "u0": lv["u0"] + box[0] / W0 * lv["du"], "v0": lv["v0"] + box[1] / H0 * lv["dv"],
+            "du": (box[2] - box[0]) / W0 * lv["du"], "dv": (box[3] - box[1]) / H0 * lv["dv"]}
+
+
+MAJOR = {"motorway", "trunk", "primary", "secondary", "tertiary", "motorway_link", "trunk_link", "primary_link"}
+
+
+def osm_vector(lat: float, lon: float, radius: float, b_radius: float) -> dict:
+    """Roads (with names), water, parks and building footprints around the site from OpenStreetMap (Overpass)."""
+    q = f"""[out:json][timeout:60];
+(way["highway"~"motorway|trunk|primary|secondary|tertiary|residential|unclassified|living_street|motorway_link|trunk_link|primary_link"](around:{radius:.0f},{lat},{lon});
+ way["natural"="water"](around:{radius:.0f},{lat},{lon}); way["waterway"="riverbank"](around:{radius:.0f},{lat},{lon});
+ way["leisure"="park"](around:{radius:.0f},{lat},{lon}); way["landuse"~"grass|recreation_ground"](around:{radius:.0f},{lat},{lon});
+ way["building"](around:{b_radius:.0f},{lat},{lon}););
+out geom tags;"""
+    d, last = None, None
+    for ep in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
+               "https://overpass.private.coffee/api/interpreter"):
+        try:
+            d = _post(ep, {"data": q}, timeout=120)
+            break
+        except Exception as e:  # noqa: BLE001  (busy mirror: try the next one)
+            last = e
+    if d is None:
+        raise SystemExit(f"OpenStreetMap (Overpass) không trả lời: {last}")
+    tol = 0.6 / (256 * 2 ** 17)
+    out = {"roads": [], "water": [], "parks": [], "buildings": []}
+    for el in d.get("elements", []):
+        g = el.get("geometry") or []
+        if len(g) < 2:
+            continue
+        pts = simplify([merc(p["lat"], p["lon"]) for p in g], tol)
+        pts = [[round(a, 9), round(b, 9)] for a, b in pts]
+        tg = el.get("tags", {})
+        if "highway" in tg:
+            out["roads"].append({"pts": pts, "major": tg["highway"] in MAJOR, "name": tg.get("name", "")})
+        elif "building" in tg:
+            lv = tg.get("building:levels")
+            out["buildings"].append({"pts": pts, "levels": int(lv) if str(lv).isdigit() else None})
+        elif tg.get("natural") == "water" or tg.get("waterway") == "riverbank":
+            out["water"].append(pts)
+        else:
+            out["parks"].append(pts)
+    out["buildings"] = out["buildings"][:400]
+    return out
+
+
+def plan_quad(pl: dict, root: Path) -> dict:
+    """A planning map image laid on the satellite: {"image": "qh.jpg", "points": [[px, py, lat, lon], …]} (≥ 3 control points;
+    4+ fits a perspective warp). Returns the image corners in Mercator units for GeoMap's `plans`."""
+    import numpy as np
+    from PIL import Image
+    img = Path(pl["image"]) if Path(pl["image"]).is_absolute() else root / pl["image"]
+    w, h = Image.open(img).size
+    P = np.array([[p[0], p[1]] for p in pl["points"]], float)
+    Q = np.array([merc(p[2], p[3]) for p in pl["points"]], float)
+    corners = np.array([[0, 0], [w, 0], [w, h], [0, h]], float)
+    if len(P) >= 4:  # homography (DLT)
+        A = []
+        for (x, y), (u, v) in zip(P, Q):
+            A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
+            A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
+        Hm = np.linalg.svd(np.array(A))[2][-1].reshape(3, 3)
+        c = np.c_[corners, np.ones(4)] @ Hm.T
+        quad = c[:, :2] / c[:, 2:3]
+    else:  # affine from 3 points
+        M = np.linalg.lstsq(np.c_[P, np.ones(len(P))], Q, rcond=None)[0]
+        quad = np.c_[corners, np.ones(4)] @ M
+    return {"src": str(img), "w": w, "h": h, "quad": [[round(float(a), 10), round(float(b), 10)] for a, b in quad],
+            "opacity": pl.get("opacity", 0.72), "legend": pl.get("legend", [])}
+
+
+def isochrones(site: tuple[float, float], minutes: list[float], rays: int = 32) -> list[dict]:
+    """Areas reachable by car within each time (OSRM table): driving time sampled along rays from the site; each band is
+    the star polygon through the farthest sample still inside the time. Estimates, label them "khoảng"."""
+    tmax = max(minutes)
+    rmax = tmax / 60 * 55 * 1000  # metres a car could reach at ~55 km/h
+    radii = [rmax * f for f in (0.06, 0.12, 0.19, 0.27, 0.36, 0.46, 0.57, 0.69, 0.82, 1.0)]
+    pts = []
+    for a in range(rays):
+        ang = 2 * math.pi * a / rays
+        for r in radii:
+            dlat = r * math.cos(ang) / 111195.0
+            dlon = r * math.sin(ang) / (111195.0 * math.cos(math.radians(site[0])))
+            pts.append((site[0] + dlat, site[1] + dlon, a, r))
+    dur = []
+    for i in range(0, len(pts), 90):
+        chunk = pts[i:i + 90]
+        coords = ";".join([f"{site[1]},{site[0]}"] + [f"{p[1]},{p[0]}" for p in chunk])
+        r = _get(f"https://router.project-osrm.org/table/v1/driving/{coords}", {"sources": "0"}, wait=0.6)
+        dur += [(x if x is not None else 1e9) / 60 for x in r["durations"][0][1:]]
+    bands = []
+    for m in sorted(minutes):
+        poly = []
+        for a in range(rays):
+            best = radii[0] * 0.5
+            for (la, lo, aa, r), d in zip(pts, dur):
+                if aa == a and d <= m:
+                    best = max(best, r)
+            ang = 2 * math.pi * a / rays
+            la = site[0] + best * math.cos(ang) / 111195.0
+            lo = site[1] + best * math.sin(ang) / (111195.0 * math.cos(math.radians(site[0])))
+            poly.append(merc(la, lo))
+        for _ in range(3):  # Chaikin smoothing: a soft blob instead of a star
+            poly = [pt for i in range(len(poly)) for pt in (
+                (0.75 * poly[i][0] + 0.25 * poly[(i + 1) % len(poly)][0], 0.75 * poly[i][1] + 0.25 * poly[(i + 1) % len(poly)][1]),
+                (0.25 * poly[i][0] + 0.75 * poly[(i + 1) % len(poly)][0], 0.25 * poly[i][1] + 0.75 * poly[(i + 1) % len(poly)][1]))]
+        bands.append({"min": m, "polys": [[[round(a, 9), round(b, 9)] for a, b in poly]]})
+    return bands
 
 
 def main():
@@ -382,7 +535,9 @@ def main():
     a = ap.parse_args()
     if a.cmd == "build":
         W, H = (1080, 1920) if a.aspect == "9:16" else (1920, 1080)
-        res = build(json.loads(Path(a.spec).read_text(encoding="utf-8")), Path(a.out), W, H)
+        spec = json.loads(Path(a.spec).read_text(encoding="utf-8"))
+        spec["_root"] = str(Path(a.spec).resolve().parent)
+        res = build(spec, Path(a.out), W, H)
         s = res["site"]
         info = ""
         if s.get("ring"):

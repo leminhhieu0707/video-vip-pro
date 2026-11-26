@@ -407,6 +407,41 @@ Sounds follow the props automatically (a whoosh per scene, a click when a card l
 
 Rules: distances and times on screen say "khoảng / ~" and the video carries a small "ước tính theo OSRM / OpenStreetMap" note; the imagery credit never leaves the frame; a site boundary taken from OpenStreetMap is labelled as such (it may be a construction zone, not the legal plot); numbers about a real project (area, investment, dates) come from news / official pages and the sources go on the end card. For a real developer's project, add "video minh hoạ, không phải quảng cáo của chủ đầu tư" unless the user is that developer. Imagery: `"source": "esri"` (free with the credit) or `"mapbox"` with `MAPBOX_TOKEN` for commercial work; never Google tiles. Sounds follow the props (fly-in whoosh, sparkle when the boundary closes, pop per route card; pen + whoosh for the floor plan; pops as blocks rise).
 
+## ESTATE pro pack (the agency look: `Estate.tsx`, `geo.py`, `footage.py`, `ges.py`, render.py `finish`)
+
+**Look.** Every estate comp defaults to `look: "luxury"`: thin wide-tracked caps + serif italic numbers, hairline leaders with a ground dot, dimension lines with end ticks along the plot, a dark scrim instead of boxes (`look: "classic"` brings the old cards back). Add `"handheld": 0.6–1` to every GeoMap (drone drift), `"motion_blur": 3` to fast GeoMap / GlobeIntro overlays (renders 3× the frames and averages them: real motion blur, ~3× render time) and plan-level `"finish": true` (grade cinema_ad + soft bloom + vignette + film grain; or `{"grade", "glow", "grain", "vignette"}`). These three are what stops a map video looking machine-made.
+
+**More GeoMap props**
+| prop | effect |
+|---|---|
+| `volna: true` | comet light streaks keep running along every drawn route after it draws (Volna look) |
+| `focus_at` | everything outside the plot darkens (spotlight on the plot) |
+| `houses: [{lot \| ring, floors, fh, at, drop, inset}]` | houses rise on lots (or drop from the sky with a bounce, `drop: true`), window bands, CSS 3D |
+| `follow: {name, from, to, z, tilt, reverse}` | the camera flies along a POI's real route towards the site, road ahead pointing up |
+| `vector` (geo.py `"vector": {"radius_m", "buildings_m"}`) + `basemap: "night" \| "light" \| "blend"` + `vector_at` | redrawn map from OpenStreetMap (roads gold, water, parks, building footprints): the Geolayers look instead of the photo; `streets_at` writes road names along the roads |
+| `plans` (geo.py `"plans": [{"image", "points": [[px, py, lat, lon] ×3–4]}]`) + `plans_at`, `plans_opacity` | an official planning map warped onto the satellite (multiply blend, 4 points = perspective fit) |
+| `iso` (geo.py `"isochrone_min": [5, 10, 15]`) + `iso_at` | areas reachable by car in 5 / 10 / 15 minutes (OSRM samples, smoothed) |
+| geo.py `"superres": true` | one sharper level past z 19 around the plot (Lanczos ×2 + unsharp) |
+| geo.py `"world": true` → `world` | Earth texture for GlobeIntro |
+
+**New comps**
+| comp | props | use |
+|---|---|---|
+| `GlobeIntro` | `world`, `lat`, `lon`, `spin` 140, `dive_at`, `title`, `sub` | The Earth spins to the site, dives through a cloud flash; cut to the GeoMap fly-in (start it around z 10). |
+| `KnockoutText` | `text` (`\n` lines), `sub`, `bg`, `ink`, `size`, `fly_at`, `fly_x` / `fly_y`, `fly_dur` | Solid card with the words cut out, the video showing through the letters, then the camera flies through a letter. |
+| `InvertTitle` | `text`, `size`, `y`, `dir`, `speed`, `sub` | Huge sliding words. Put `"blend": "difference"` on the overlay = chữ âm bản (inverts what is behind). |
+| `LensFlare` | `x0` → `x1`, `y`, `at`, `dur`, `color`, `size` | Anamorphic streak + ghosts. Overlay with `"blend": "screen"`. |
+| `TrackedPlot` | `track: {corners}` (plot at the overlay start, frame fractions), `edges`, `area`, `facing`, `labels [{at, text, sub, t}]`, `ground {text, sub, size}`, `drops [{src PNG, at, w, t}]`, `focus`, `draw_at`, `draw` | On a drone / GES shot: render.py tracks the ground (KLT + homography, ~5 px drift over 4 s in tests) and the boundary, dimensions, labels, text lying on the ground and dropped cut-outs stay glued to the land. Choose the corners by looking at the frame at the overlay start, or with `ges.py locate`. |
+
+**Footage overlays (render.py → footage.py)**
+- `{"type": "sky", "start", "end", "sky": "sky.jpg|mp4" (or gradient "top"/"bottom"), "glow": "#FFD27A", "box": [x, y, w, h], "reveal": 1.5}`: per-frame sky matte (bright / blue / smooth region touching the top), new sky where it is; `glow` alone draws a neon line along the skyline (`box` = only one building = building saber; `reveal` = draws left to right). Works best on tripod / slow drone shots with a clear sky.
+- motion overlay `"behind": "sky"`: the comp shows only on the sky = text behind the buildings.
+- `{"type": "daynight", "start", "end", "at", "fade": 1.6, "prompt"}`: the frame at `at` becomes its blue-hour / night version (KIE.AI nano-banana-pro, ~6–12 credits, aligned back onto the frame) and cross-fades in. Static or near-static shots.
+- `{"type": "objwipe", "start", "end", "src": clip B, "in", "box": [x, y, w, h] (the pillar / wall edge at start), "side": "right"}`: masking transition, clip B appears behind the object's trailing edge as it crosses the frame (edge tracker, not template).
+- `audio.music: {"suno": {"style", "duration", "title"}}`: an instrumental track generated on KIE.AI (Suno V6), cached; `plan["env"]` = path to the .env with KIE_API_KEY if it is not in the environment.
+
+**Google Earth Studio** (`ges.py`): `keys` turns the GeoMap camera into GES keyframes (target, altitude, heading, tilt); Hiếu renders 1080×1920 in GES; `locate` finds the plot on the first frame by matching the satellite mosaic and writes TrackedPlot corners + a check image. Credit "Google Earth" on screen.
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.

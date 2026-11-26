@@ -251,6 +251,20 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
             if props.get(key) is not None and float(props[key]) >= 0:
                 out.append((f(*snd), float(props[key]), vol))
         return out + ([(f("ding", "popup"), float(props["rings_at"]) + 0.3, 0.1)] if props.get("rings_at") is not None else [])
+    if comp == "TrackedPlot":  # the boundary draws (swipe), a sparkle when it closes, a pop per label
+        da, dr = float(props.get("draw_at", 0.2)), float(props.get("draw", 1.4))
+        out = [(f("swipe", "dwhoosh"), da, 0.12), (f("sparkle", "flash"), da + dr, 0.12)]
+        return out + [(f("pop", "popup"), float(lb.get("t", da + dr)), 0.12) for lb in (props.get("labels") or [])[:4]]
+    if comp == "GlobeIntro":  # rising air while the Earth turns, a big whoosh through the clouds
+        da = float(props.get("dive_at") or dur * 0.45)
+        return [(f("riser", "charge"), max(0.0, da - 1.2), 0.12), (f("whoosh", "dwhoosh"), da + (dur - da) * 0.55, 0.2)]
+    if comp == "KnockoutText":
+        fa = float(props.get("fly_at") or dur - float(props.get("fly_dur", 1.0)) - 0.1)
+        return [(f("hit", "thump"), float(props.get("at", 0)) + 0.05, 0.14), (f("whoosh", "dwhoosh"), fa, 0.18)]
+    if comp == "InvertTitle":
+        return [(f("whoosh", "dwhoosh"), 0.0, 0.14)]
+    if comp == "LensFlare":
+        return [(f("sparkle", "flash"), float(props.get("at", 0)) + 0.3, 0.08)]
     if comp == "LotCard":  # card slides in, a ding when the price lands
         at, n = float(props.get("at", 0)), len(props.get("rows") or [])
         return [(f("whoosh", "dwhoosh"), at, 0.14)] + ([(f("ding", "vclick"), at + 0.45 + n * float(props.get("step", 0.22)), 0.16)] if props.get("price") else [])

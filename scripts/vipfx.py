@@ -1063,7 +1063,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     return vlast
 
 
-BLEND_BASE = {"overlay": "gray", "softlight": "gray", "hardlight": "gray", "screen": "black", "addition": "black",
+BLEND_BASE = {"overlay": "gray", "softlight": "gray", "hardlight": "gray", "screen": "black", "addition": "black", "difference": "black", "exclusion": "black",
               "lighten": "black", "multiply": "white", "darken": "white"}
 
 

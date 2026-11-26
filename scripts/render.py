@@ -854,6 +854,43 @@ def audio_levels(base: Path, s: float, e: float, fps: int) -> list[float]:
     return [round(float(x), 3) for x in db]
 
 
+def prepare_footage(plan: dict, starts: list[float], total: float, canvas: dict, work: Path, root: Path) -> None:
+    """Real-footage effects that become plain overlays: {"type": "sky"} (new sky / skyline neon), {"type": "daynight"}
+    (the frame turns into its night version, KIE.AI), and audio.music {"suno": {"style": …}} (generated track)."""
+    ovs = plan.get("overlays", []) or []
+    todo = [o for o in ovs if o.get("type") in ("sky", "daynight", "objwipe")]
+    mus = (plan.get("audio") or {}).get("music") or {}
+    if not todo and not (isinstance(mus, dict) and mus.get("suno")):
+        return
+    import footage  # noqa: E402
+    fps, W, H = int(canvas.get("fps", 30)), canvas["width"], canvas["height"]
+    for o in todo:
+        s, e = overlay_times(o, starts, total)
+        if o["type"] == "sky":
+            mov = footage.sky_replace_overlay(work / "base.mp4", s, e, o, fps, work, W, H, root)
+            o.clear()
+            o.update({"type": "video", "src": str(mov), "start": s, "end": e, "pos": "center", "width": 1.0, "in": 0, "fade": 0.3, "sfx": None})
+        elif o["type"] == "objwipe":
+            mov = footage.object_wipe(work / "base.mp4", s, e, o, fps, work, W, H, root)
+            o.clear()
+            o.update({"type": "video", "src": str(mov), "start": s, "end": e, "pos": "center", "width": 1.0, "in": 0, "fade": 0, "sfx": "whoosh"})
+        else:
+            at = float(o.get("at", s))
+            fr = work / "frames" / f"dn_{at:.2f}.jpg"
+            fr.parent.mkdir(parents=True, exist_ok=True)
+            run([FFMPEG, "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(work / "base.mp4"), "-frames:v", "1", "-q:v", "2", str(fr)])
+            night = footage.day_to_night(fr, work / "frames" / f"night_{at:.2f}_{hashlib.md5(str(o.get('prompt')).encode()).hexdigest()[:6]}.jpg",
+                                         footage.kie_key(plan.get("env")), o.get("prompt"))
+            o.clear()
+            o.update({"type": "image", "src": str(night), "start": s, "end": e, "pos": "center", "width": 1.0, "fade": float(o.get("fade", 1.6)), "sfx": None})
+    if isinstance(mus, dict) and mus.get("suno"):
+        sp = mus["suno"]
+        out = work / f"suno_{hashlib.md5(json.dumps(sp, sort_keys=True).encode()).hexdigest()[:8]}.mp3"
+        footage.suno(sp.get("style", "cinematic luxury real estate, piano, strings, soft pulse"), float(sp.get("duration", total + 2)), out,
+                     footage.kie_key(plan.get("env")), sp.get("title", "Estate"))
+        mus["src"] = str(out)
+
+
 def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, work: Path, root: Path) -> None:
     """Render every "motion" overlay (Remotion, Blue pack) to a cached transparent .mov and turn it into a
     full-frame "video" overlay for the final pass."""
@@ -875,6 +912,11 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
         if o.get("comp") == "TrackLabel" and isinstance(o["props"].get("track"), dict):
             s, e = overlay_times(o, starts, total)
             o["props"]["track"] = track_box(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work)
+        if o.get("comp") == "TrackedPlot" and isinstance(o["props"].get("track"), dict) and not o["props"].get("frames"):
+            import footage  # noqa: E402
+            s, e = overlay_times(o, starts, total)
+            o["props"]["frames"] = footage.track_plane(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work,
+                                                       canvas["width"], canvas["height"])
         if o.get("comp") == "BeatText" and not o["props"].get("beats"):
             s, e = overlay_times(o, starts, total)
             o["props"]["beats"] = music_beats(plan, s, e, work)
@@ -890,12 +932,28 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
 
     def one(o):
         s, e = overlay_times(o, starts, total)
-        return render_motion.render(o["comp"], o.get("props", {}), max(0.2, e - s), canvas["width"], canvas["height"],
-                                    int(canvas.get("fps", 30)), cache_dir=work / "motion", root=root, bundle=bundle)
+        fps = int(canvas.get("fps", 30))
+        mb = int(o.get("motion_blur") or 0)  # real motion blur: render n× the frame rate, average each n frames back down
+        p = render_motion.render(o["comp"], o.get("props", {}), max(0.2, e - s), canvas["width"], canvas["height"],
+                                 fps * mb if mb > 1 else fps, cache_dir=work / "motion", root=root, bundle=bundle)
+        if mb > 1:
+            out = p.with_name(f"{p.stem}_mb.mov")
+            if not out.exists():
+                run([FFMPEG, "-v", "error", "-y", "-i", str(p), "-vf",
+                     f"tmix=frames={mb},select='not(mod(n\\,{mb}))',setpts=N/{fps}/TB", "-r", str(fps),
+                     "-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", str(out)])
+            p = out
+        return p
 
     with ThreadPoolExecutor(max_workers=3) as ex:
         paths = list(ex.map(one, items))
     for o, p in zip(items, paths):
+        if o.get("behind") in ("sky", "buildings"):  # text behind the buildings: shown only where the sky matte is
+            import footage  # noqa: E402
+            s, e = overlay_times(o, starts, total)
+            m = footage.sky_masks(work / "base.mp4", s, e, int(canvas.get("fps", 30)), work, canvas["width"], canvas["height"])
+            p = footage.alpha_times_mask(Path(p), m, Path(p).with_name(Path(p).stem + "_sky.mov"))
+            o.pop("behind")
         o.update({"type": "video", "src": str(p), "pos": "center", "width": 1.0, "in": 0, "fade": 0, "_motion": o["comp"]})
         o.pop("loop", None)
         o.pop("key", None)
@@ -994,6 +1052,18 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
         n += 1
 
     vchain = []
+    fin = plan.get("finish")
+    if fin:  # cinematic finish over picture + graphics (captions stay clean): grade, bloom, vignette, film grain
+        fin = {"grade": "cinema_ad", "glow": 0.18, "grain": 6, "vignette": "PI/5.5"} if fin is True else fin
+        if float(fin.get("glow", 0)) > 0:
+            fc.append(f"{vlast}format=gbrp,split=2[fna][fnb];[fnb]scale=iw/4:ih/4,gblur=sigma=6,scale={W}:{H},"
+                      f"curves=all='0/0 0.55/0.08 1/0.9'[fng];[fna][fng]blend=all_mode=screen:all_opacity={float(fin['glow']):.2f},format=yuv420p[fnout]")
+            vlast = "[fnout]"
+        vchain += grade_filters(fin.get("grade"))
+        if fin.get("vignette"):
+            vchain.append(f"vignette=angle={fin['vignette']}")
+        if float(fin.get("grain", 0)) > 0:
+            vchain.append(f"noise=c0s={int(fin['grain'])}:c0f=t+u")
     if ass:
         vchain.append(f"ass=filename=overlay.ass:fontsdir=fonts")
     fi, fo = float(plan.get("fade_in", 0)), float(plan.get("fade_out", 0))
@@ -1179,7 +1249,7 @@ def main():
     au = plan.get("audio") or {}
     for k in ("music", "voiceover"):
         for item in (au.get(k) if isinstance(au.get(k), list) else [au.get(k)]):
-            if item:
+            if item and item.get("src"):  # a Suno music entry has no src until prepare_footage makes it
                 item["src"] = absify(item["src"])
     tr = (plan.get("subtitles") or {}).get("transcript")
     if tr:
@@ -1232,6 +1302,7 @@ def main():
         return
     trend_layers(plan, clips, starts, total)
     plan["_cm_chain"] = color_match_chain(plan, clips, starts, total)
+    prepare_footage(plan, starts, total, cv, work, root)
     prepare_motion(plan, starts, total, cv, work, root)
     ass = build_ass(plan, cv["width"], cv["height"], clips, starts, total, work)
     preview = tuple(map(float, a.preview.split("-"))) if a.preview else None
