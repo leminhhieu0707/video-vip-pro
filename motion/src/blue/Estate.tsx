@@ -1538,11 +1538,12 @@ export const RunTitle: React.FC<P> = ({duration, name = 'Hồ bơi resort', kick
   const {frame, fps, t, W, H} = useT();
   const acc = ACCENT[tone] || ACCENT.ivory;
   const chars = Array.from(String(name).normalize('NFC'));
-  const step = Math.min(0.045, 0.7 / Math.max(1, chars.length));
+  const win = Math.min(0.6, Math.max(0.25, duration * 0.3)); // the whole name is in by ~30 % of the shot, so fast cuts still read
+  const step = win / Math.max(1, chars.length), ld = Math.min(0.42, Math.max(0.24, duration * 0.18));
   const outAt = duration - 0.45;
-  const kp = lerp(t, at, at + 0.6, 0, 1, (q) => smooth(q));
+  const kp = lerp(t, at, at + Math.min(0.6, win + 0.15), 0, 1, (q) => smooth(q));
   const lp = lerp(t, at + 0.25, at + 0.9, 0, 1, (q) => smooth(q));
-  const sweep = lerp(t, at + 0.55, at + 1.35, -0.3, 1.3);
+  const sweep = lerp(t, at + 0.1 + win, at + 0.1 + win + 0.7, -0.2, 1.2);
   const ko = 1 - lerp(t, outAt, outAt + 0.3);
   const left = align === 'left';
   return <AbsoluteFill>
@@ -1554,15 +1555,15 @@ export const RunTitle: React.FC<P> = ({duration, name = 'Hồ bơi resort', kick
         transform: `translateY(${(1 - ko) * -16}px)`}}>{kicker}</div> : null}
       <div style={{display: 'inline-block', position: 'relative', overflow: 'hidden', padding: `${size * 0.08}px 0.04em ${size * 0.16}px`, lineHeight: 1.08}}>
         {chars.map((ch, i) => {
-          const a = at + 0.18 + i * step;
-          const p = lerp(t, a, a + 0.5, 0, 1, (q) => 1 - Math.pow(1 - q, 3));
+          const a = at + 0.06 + i * step;
+          const p = lerp(t, a, a + ld, 0, 1, (q) => 1 - Math.pow(1 - q, 3));
+          const shine = Math.max(0, 1 - Math.abs(i / Math.max(1, chars.length - 1) - sweep) / 0.14); // light passing over this letter
           const q2 = lerp(t, outAt + i * step * 0.5, outAt + 0.35 + i * step * 0.5, 0, 1, (q) => q * q);
           return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: SANS, fontWeight: 800, fontSize: size, letterSpacing: '-0.015em',
-            color: '#fff', textShadow: '0 4px 18px rgba(0,0,0,0.55)', opacity: p * (1 - q2), filter: `blur(${(1 - p) * 10 + q2 * 6}px)`,
+            color: shine > 0 ? `rgb(255,${Math.round(255 - 22 * shine)},${Math.round(255 - 70 * shine)})` : '#fff',
+            textShadow: `0 4px 18px rgba(0,0,0,0.55)${shine > 0 ? `, 0 0 ${18 * shine}px rgba(255,220,150,${0.9 * shine})` : ''}`, opacity: p * (1 - q2), filter: `blur(${(1 - p) * 10 + q2 * 6}px)`,
             transform: `translateY(${(1 - p) * size * 0.9 - q2 * size * 0.5}px)`}}>{ch}</span>;
         })}
-        <div style={{position: 'absolute', inset: 0, pointerEvents: 'none', mixBlendMode: 'overlay',
-          background: `linear-gradient(105deg, transparent ${sweep * 100 - 12}%, rgba(255,240,200,0.9) ${sweep * 100}%, transparent ${sweep * 100 + 12}%)`}} />
       </div>
       <div style={{width: size * 2.4 * lp, height: 2.5, background: `linear-gradient(90deg, ${left ? acc : 'transparent'}, ${acc}, transparent)`, margin: left ? `${size * 0.02}px 0 0` : `${size * 0.02}px auto 0`,
         opacity: ko}} />
