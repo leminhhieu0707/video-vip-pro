@@ -18,6 +18,7 @@ Honesty: every price / number / place it shows comes from the transcript; nothin
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import random
@@ -739,6 +740,19 @@ CAM = {
 
 
 # ------------------------------------------------------------------ the brain
+def pick_captions(opt, words: list[dict], ind: str, style: str, full: str) -> str:
+    """One caption system per video, varied between videos (Hiếu: keep every look, don't put word-pop on every talking head).
+    wordpop = WordStack lockups, blue = two-tier BlueText. --captions forces one. Auto: the share of word-pop depends on
+    the edit style, and the pick is seeded by the video's own words + --seed, so different videos land on different looks."""
+    if opt.captions != "auto":
+        return opt.captions
+    if not words or ind == "news":
+        return "blue"
+    share = {"calm": 0.5, "story": 0.4, "hype": 0.3}.get(style, 0.4)
+    h = int(hashlib.md5((full[:400] + str(opt.seed)).encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
+    return "wordpop" if h < share else "blue"
+
+
 def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     rnd = random.Random(opt.seed)
     sents = sentences(ar, words)
@@ -764,16 +778,13 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     ctx = {"brand": opt.brand or "", "style": style, "free_side": free_side, "broll": broll_files(opt.broll), "logo": opt.logo or "",
            "metal": "red" if theme == "red" else ("silver" if theme in ("blue", "mono", "sky") else "gold"),
            "price_label": "", "accent": GRAD.get(theme, GRAD["gold"])[1]}
-    wp_mode = opt.captions if opt.captions != "auto" else ("wordpop" if words and ind != "news" else "blue")
-    TEXTY = {"NeonText", "DecodeText", "GlassText", "MetalText", "PunchWord", "CubeFlip", "Stamp", "NumberTitle", "Checklist"}
+    wp_mode = pick_captions(opt, words, ind, style, full)
     # score every (sentence, effect)
     cands = []
     for s, info in zip(sents, infos):
         tags = set(info["tags"])
         for name, serves, base, hero, zone, styles in CAT:
             if not (styles & style_set):
-                continue
-            if wp_mode == "wordpop" and name in TEXTY:
                 continue
             hit = serves & tags
             if not hit:
@@ -812,7 +823,7 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
                 {"type": "motion", "comp": "GiantCaption", "start": s0["start"] + 0.12, "end": s0["end"], "behind": True,
                  "props": {"text": k0, "y": round(max(0.12, a["person"][1] + 0.03), 3), "size": 300 if len(k0) <= 6 else 220}}]
         picks[0] = {"name": "GiantCaption", "why": "hook: keyword behind the head", "layers": hook}
-    elif 2 <= len(k0) <= 16 and wp_mode != "wordpop":
+    elif 2 <= len(k0) <= 16:
         hook = build("DecodeText", s0, i0, a, ctx)
         if hook:
             picks[0] = {"name": "DecodeText", "why": "hook: keyword reveal", "layers": hook}
@@ -986,7 +997,7 @@ def main():
     ap.add_argument("--logo", default=None, help="logo image for the neon tunnel")
     ap.add_argument("--hud", default="auto", choices=["auto", "off"], help="full-screen HUD chapter on a process list (off = never)")
     ap.add_argument("--captions", default="auto", choices=["auto", "wordpop", "blue"],
-                    help="wordpop = WordStack word-by-word lockups (default when word times exist), blue = two-tier BlueText")
+                    help="auto = one look per video, varied between videos; wordpop = WordStack word-by-word lockups; blue = two-tier BlueText")
     ap.add_argument("--seed", type=int, default=0, help="change it to get a different but equally valid pick")
     ap.add_argument("-o", "--out", default=None)
     ap.add_argument("--plan", default=None, help="also write a complete plan_vip.json")
@@ -1022,6 +1033,8 @@ def main():
               f"{' + ' + str(len(b['studio'].get('props', []))) + ' phụ kiện' if b['studio'].get('props') else ''}")
     for s in b["sentences"]:
         print(f"  {s['start']:6.2f} {s['cam']:5} {(s['effect'] or '-'):12} {('[' + ','.join(s['tags']) + ']'):28} {s['text'][:58]}")
+    print(f"[brain] phụ đề: {'chữ nhảy WordStack' if b.get('captions_mode') == 'wordpop' else 'BlueText 2 tầng'}"
+          f" (đổi bằng --captions wordpop|blue hoặc --seed)")
     if b.get("wordpop"):
         print(f"[brain] chữ nhảy WordStack: {len(b['wordpop'])} cụm ({sum(1 for o in b['wordpop'] if o.get('behind'))} cụm nấp sau đầu)"
               f" | từ khoá: {', '.join(' '.join(w['w'] for w in o['props']['words'] if w['k']) or '-' for o in b['wordpop'][:12])}…")
