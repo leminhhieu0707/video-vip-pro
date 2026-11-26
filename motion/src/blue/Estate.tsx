@@ -38,10 +38,15 @@ const pathLen = (pts: number[][]) => pts.reduce((s, p, i) => (i ? s + Math.hypot
  * GeoMap: props = geo.py's geomap.json (levels, camera, site, pois, rings, credit, scale) plus cues:
  * site_at (s, when the boundary starts drawing), site_draw (2), site_label, site_sub, routes [{name, at}] (which POI
  * routes draw, when), pins_at (other POIs pop), rings_at, color (lines, gold), camera (override keys {t, u, v, z, tilt}),
- * fill ('rgba(255,201,60,0.18)'), title / title_at (big text on top).
+ * fill ('rgba(255,201,60,0.18)'), compass.
+ * Plot cues: lots (geo.py "lots") + lots_at (the subdivision pops, coloured by status, with a legend), site_edges (true: the
+ * length of every edge + the area in the middle once the boundary is drawn), lift_at / lift_m (4: the plot rises out of the
+ * map as a 3D block), roads (geo.py "roads") + roads_at (a measuring arrow across the road with its width).
  */
-export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = {}, pois = [], rings = [], scale = 1.5, credit = '',
-  site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true}) => {
+const LOT_ST: Record<string, [string, string]> = {available: ['#22C55E', 'Còn trống'], sold: ['#EF4444', 'Đã bán'], reserved: ['#F59E0B', 'Đang giữ chỗ']};
+export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = {}, pois = [], rings = [], scale = 1.5, credit = '', mpu = 38000000,
+  site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true,
+  lots = [], lots_at, legend = true, site_edges = false, lift_at, lift_m = 4, roads = [], roads_at}) => {
   const {frame, fps, t, W, H} = useT();
   const cam = camAt(camera.length ? camera : [{t: 0, u: site.u ?? 0.5, v: site.v ?? 0.5, z: 14}], t);
   const k = 256 * scale * Math.pow(2, cam.z); // screen px per mercator unit
@@ -65,7 +70,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   const sd = ring.map((p) => p.join(',')).join(' ');
   return <AbsoluteFill style={{background: '#0B1520', overflow: 'hidden', opacity: o}}>
     <div style={{position: 'absolute', left: W / 2 - PW / 2, top: H / 2 - PH / 2, width: PW, height: PH, transformOrigin: '50% 50%',
-      transform: `perspective(${H * 1.25}px) rotateX(${cam.tilt}deg) rotateZ(${cam.rot}deg)`}}>
+      transform: `perspective(${H * 1.25}px) rotateX(${cam.tilt}deg) rotateZ(${cam.rot}deg)`, transformStyle: 'preserve-3d'}}>
       {levels.map((L: any, i: number) => {
         const op = i === 0 ? 1 : interpolate(cam.z, [L.z - 1.4, L.z - 0.8], [0, 1], CL);
         if (op <= 0) return null;
@@ -98,6 +103,27 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
               strokeDashoffset={-L * Math.max(0, p - 0.03)} opacity={p < 1 ? 1 : 0} />
           </g>;
         })}
+        {lots_at != null ? lots.map((l: any, i: number) => {
+          const p = lerp(t, lots_at + i * 0.05, lots_at + i * 0.05 + 0.35);
+          if (p <= 0) return null;
+          const c = (LOT_ST[l.status] || LOT_ST.available)[0];
+          return <polygon key={`lot${i}`} points={l.ring.map((q: number[]) => `${X(q[0])},${Y(q[1])}`).join(' ')} fill={c} fillOpacity={0.4 * p}
+            stroke="#fff" strokeWidth={2.5} strokeOpacity={0.95 * p} />;
+        }) : null}
+        {roads_at != null ? roads.map((r: any, i: number) => {
+          const p = lerp(t, roads_at + i * 0.3, roads_at + i * 0.3 + 0.6, 0, 1, EASE_IN);
+          if (p <= 0) return null;
+          const ax = X(r.a[0]), ay = Y(r.a[1]), bx = X(r.b[0]), by = Y(r.b[1]);
+          const mx = (ax + bx) / 2, my = (ay + by) / 2;
+          const A = [mx + (ax - mx) * p, my + (ay - my) * p], B = [mx + (bx - mx) * p, my + (by - my) * p];
+          const L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L, nx = -uy * 12, ny = ux * 12;
+          const head = (q: number[], dir: number) => `${q[0]},${q[1]} ${q[0] - dir * ux * 22 + nx},${q[1] - dir * uy * 22 + ny} ${q[0] - dir * ux * 22 - nx},${q[1] - dir * uy * 22 - ny}`;
+          return <g key={`rd${i}`}>
+            <line x1={A[0]} y1={A[1]} x2={B[0]} y2={B[1]} stroke="#fff" strokeWidth={5} />
+            <polygon points={head(A, -1)} fill="#fff" /><polygon points={head(B, 1)} fill="#fff" />
+          </g>;
+        }) : null}
+        {ring.length && lift_at != null ? <polygon points={sd} fill="#000" opacity={0.45 * lerp(t, lift_at, lift_at + 0.6)} /> : null}
         {ring.length && sp > 0 ? <g>
           <polygon points={sd} fill={fill} opacity={lerp(t, (site_at || 0) + site_draw * 0.7, (site_at || 0) + site_draw + 0.4)} />
           <polygon points={sd} fill="none" stroke={color} strokeWidth={7} strokeLinejoin="round" strokeDasharray={`${sl * sp} ${sl}`} filter="url(#glow)" />
@@ -105,6 +131,66 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
             strokeDashoffset={-((sl * (sp < 1 ? sp : 1 + ((t - (site_at || 0) - site_draw) * 0.35) % 1)) % sl)} />
         </g> : null}
       </svg>
+      {ring.length && lift_at != null && t >= lift_at ? (() => {
+        const lp = lerp(t, lift_at, lift_at + 1.1, 0, 1, (x) => smooth(x));
+        const hpx = (lift_m / mpu) * k * lp;
+        const clip = `polygon(${ring.map((q) => `${q[0]}px ${q[1]}px`).join(', ')})`;
+        return <>
+          {ring.map((a, i) => {
+            const b = ring[(i + 1) % ring.length];
+            const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+            return <div key={`wall${i}`} style={{position: 'absolute', left: a[0], top: a[1], width: len, height: hpx, transformOrigin: '0 0',
+              transform: `rotateZ(${ang}rad) rotateX(90deg)`, background: `linear-gradient(0deg, ${color}EE, ${color}55)`, borderTop: '2px solid #fff'}} />;
+          })}
+          <div style={{position: 'absolute', inset: 0, transform: `translateZ(${hpx}px)`, clipPath: clip}}>
+            {levels.map((L: any, i: number) => {
+              const op = i === 0 ? 1 : interpolate(cam.z, [L.z - 1.4, L.z - 0.8], [0, 1], CL);
+              return op > 0 ? <Img key={i} src={url(L.src)} style={{position: 'absolute', left: X(L.u0), top: Y(L.v0), width: L.du * k, height: L.dv * k, opacity: op}} /> : null;
+            })}
+            <div style={{position: 'absolute', inset: 0, background: `${color}33`}} />
+          </div>
+          <svg width={PW} height={PH} style={{position: 'absolute', inset: 0, overflow: 'visible', transform: `translateZ(${hpx + 0.5}px)`}}>
+            <polygon points={sd} fill="none" stroke={color} strokeWidth={6} filter="url(#glow)" />
+          </svg>
+        </>;
+      })() : null}
+      {lots_at != null ? lots.map((l: any, i: number) => {
+        const p = lerp(t, lots_at + i * 0.05 + 0.15, lots_at + i * 0.05 + 0.45);
+        const pts = l.ring.map((q: number[]) => [X(q[0]), Y(q[1])]);
+        const c = centroid(pts);
+        const wpx = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+        return p > 0 && wpx > 26 ? <div key={`ll${i}`} style={{position: 'absolute', left: c[0], top: c[1], transform: `translate(-50%,-50%) ${counter}`, opacity: p,
+          fontFamily: SANS, fontWeight: 800, fontSize: Math.min(30, wpx * 0.55), color: '#fff', textShadow: '0 2px 6px #000'}}>{l.label}</div> : null;
+      }) : null}
+      {roads_at != null ? roads.map((r: any, i: number) => {
+        const p = lerp(t, roads_at + i * 0.3 + 0.4, roads_at + i * 0.3 + 0.8);
+        return p > 0 ? <div key={`rl${i}`} style={{position: 'absolute', left: (X(r.a[0]) + X(r.b[0])) / 2, top: (Y(r.a[1]) + Y(r.b[1])) / 2,
+          transform: `translate(-50%,-50%) ${counter} scale(${0.7 + 0.3 * p})`, opacity: p, padding: '8px 18px', borderRadius: 99, background: '#fff', color: '#111',
+          fontFamily: SANS, fontWeight: 800, fontSize: 28, whiteSpace: 'nowrap', boxShadow: '0 6px 20px rgba(0,0,0,0.4)'}}>↔ {r.label}</div> : null;
+      }) : null}
+      {site_edges && ring.length && site_at != null ? (() => {
+        const p = lerp(t, site_at + site_draw, site_at + site_draw + 0.5);
+        if (p <= 0) return null;
+        const c = centroid(ring);
+        const narrow = Math.min(...ring.map((q, i) => Math.hypot(ring[(i + 1) % ring.length][0] - q[0], ring[(i + 1) % ring.length][1] - q[1]))) < 240; // thin plot: area label above it
+        const lift = lift_at != null ? (lift_m / mpu) * k * lerp(t, lift_at, lift_at + 1.1, 0, 1, (x) => smooth(x)) : 0;
+        return <>
+          {ring.map((a, i) => {
+            const b = ring[(i + 1) % ring.length], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+            const dx = m[0] - c[0], dy = m[1] - c[1], dl = Math.hypot(dx, dy) || 1;
+            const e = (site.edges_m || [])[i];
+            return e ? <div key={`ed${i}`} style={{position: 'absolute', left: m[0] + (dx / dl) * 58, top: m[1] + (dy / dl) * 58,
+              transform: `translateZ(${lift}px) translate(-50%,-50%) ${counter}`, opacity: p, padding: '4px 12px', borderRadius: 10, background: 'rgba(10,14,24,0.85)',
+              border: `2px solid ${color}`, color: '#fff', fontFamily: SANS, fontWeight: 800, fontSize: 26, whiteSpace: 'nowrap'}}>{fmt(e)} m</div> : null;
+          })}
+          {site.area_m2 ? <div style={{position: 'absolute', left: c[0], top: narrow ? Math.min(...ring.map((q) => q[1])) - 120 : c[1],
+            transform: `translateZ(${lift + 1}px) translate(-50%,-50%) ${counter}`, opacity: p,
+            textAlign: 'center', fontFamily: SANS, color: '#fff', textShadow: '0 2px 10px #000'}}>
+            <div style={{fontWeight: 800, fontSize: 44}}>{fmt(site.area_m2, 0)} m²</div>
+            {site.facing ? <div style={{fontWeight: 700, fontSize: 24, color}}>Hướng {site.facing}</div> : null}
+          </div> : null}
+        </>;
+      })() : null}
       {rings.map((r: any, i: number) => {
         const p = rings_at == null ? 0 : lerp(t, rings_at + i * 0.25 + 0.4, rings_at + i * 0.25 + 0.8);
         return p > 0 ? label(X(site.u), Y(site.v) - r.r * k, p, <div style={{padding: '6px 16px', borderRadius: 99, background: '#fff', color: '#111',
@@ -126,6 +212,17 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
         return p > 0.01 ? label(X(site.u), top - 10, p, card(site_label, site_sub, true), 'site') : null;
       })() : null}
     </div>
+    {legend && lots_at != null && lots.length ? (() => {
+      const p = lerp(t, lots_at + 0.3, lots_at + 0.8);
+      const cnt: Record<string, number> = {};
+      lots.forEach((l: any) => { cnt[l.status] = (cnt[l.status] || 0) + 1; });
+      return <div style={{position: 'absolute', left: 0, right: 0, bottom: 90, display: 'flex', justifyContent: 'center', gap: 14, opacity: p,
+        transform: `translateY(${(1 - p) * 20}px)`}}>
+        {Object.keys(LOT_ST).filter((kk) => cnt[kk]).map((kk) => <div key={kk} style={{display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
+          borderRadius: 99, background: 'rgba(10,14,24,0.82)', color: '#fff', fontFamily: SANS, fontWeight: 700, fontSize: 26}}>
+          <span style={{width: 18, height: 18, borderRadius: 5, background: LOT_ST[kk][0]}} />{LOT_ST[kk][1]} · {cnt[kk]}</div>)}
+      </div>;
+    })() : null}
     {/* haze towards the horizon hides the mosaic edge when tilted (Google-Earth look) */}
     <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(178,204,232,1) 0%, rgba(178,204,232,0.85) 12%, rgba(178,204,232,0) 34%)',
       opacity: interpolate(cam.tilt, [8, 40], [0, 1], CL), pointerEvents: 'none'}} />
@@ -425,4 +522,45 @@ export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], doors = [], wind
   </AbsoluteFill>;
 };
 
-export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D};
+/**
+ * LotCard: the plot's data sheet sliding in over the map. props: title ("LÔ 07"), rows [{k: "Diện tích", v: "100 m²"}, …]
+ * (each row ticks in, every `step` s), price, price_note, facing ("Tây Bắc": a compass needle points there), y (0.6), at.
+ */
+export const LotCard: React.FC<P> = ({duration, title = 'LÔ 01', rows = [], price, price_note, facing, y = 0.6, at = 0, step = 0.22, color = GOLD}) => {
+  const {frame, fps, t, W, H} = useT();
+  const s = spring({frame: frame - at * fps, fps, config: {damping: 15, stiffness: 140, mass: 0.7}});
+  const o = exit(frame, fps, duration, 0.3);
+  const DEG: Record<string, number> = {'Bắc': 0, 'Đông Bắc': 45, 'Đông': 90, 'Đông Nam': 135, 'Nam': 180, 'Tây Nam': 225, 'Tây': 270, 'Tây Bắc': 315};
+  const needle = facing && DEG[facing] != null ? DEG[facing] : null;
+  const np = lerp(t, at + 0.4, at + 1.2, 0, 1, (x) => smooth(x));
+  return <AbsoluteFill style={{opacity: o}}>
+    <div style={{position: 'absolute', left: W * 0.07, right: W * 0.07, top: H * y, transform: `translateY(${(1 - s) * 140}px)`, opacity: Math.min(1, s * 1.4),
+      borderRadius: 30, background: 'rgba(10,14,24,0.88)', border: `2px solid ${color}88`, boxShadow: '0 30px 80px rgba(0,0,0,0.5)', padding: '30px 38px',
+      fontFamily: SANS, color: '#fff'}}>
+      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18}}>
+        <div style={{fontWeight: 800, fontSize: 54, letterSpacing: '-0.01em'}}>{title}</div>
+        {needle != null ? <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+          <svg width={74} height={74} viewBox="-37 -37 74 74"><circle r={34} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={2} />
+            <text x={0} y={-22} fill="#fff" fontSize={13} fontWeight={800} textAnchor="middle" fontFamily="sans-serif">B</text>
+            <g transform={`rotate(${needle * np})`}><polygon points="0,-26 7,4 -7,4" fill={color} /><circle r={4} fill="#fff" /></g></svg>
+          <div style={{fontWeight: 700, fontSize: 28, color}}>{facing}</div>
+        </div> : null}
+      </div>
+      {rows.map((r: any, i: number) => {
+        const p = lerp(t, at + 0.35 + i * step, at + 0.6 + i * step);
+        return <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.12)',
+          opacity: p, transform: `translateX(${(1 - p) * 30}px)`, fontSize: 32}}>
+          <span style={{color: 'rgba(255,255,255,0.7)', fontWeight: 600}}>{r.k}</span><span style={{fontWeight: 800}}>{r.v}</span></div>;
+      })}
+      {price ? (() => {
+        const p = lerp(t, at + 0.45 + rows.length * step, at + 0.8 + rows.length * step);
+        return <div style={{marginTop: 14, paddingTop: 16, borderTop: `2px solid ${color}66`, opacity: p, transform: `scale(${0.9 + 0.1 * p})`, transformOrigin: 'left center'}}>
+          <div style={{fontWeight: 800, fontSize: 58, color}}>{price}</div>
+          {price_note ? <div style={{fontWeight: 600, fontSize: 24, color: 'rgba(255,255,255,0.6)'}}>{price_note}</div> : null}
+        </div>;
+      })() : null}
+    </div>
+  </AbsoluteFill>;
+};
+
+export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard};

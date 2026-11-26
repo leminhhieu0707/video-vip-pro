@@ -247,7 +247,13 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
             out.append((f("sparkle", "flash"), float(props["site_at"]) + float(props.get("site_draw", 2)), 0.14))
         out += [(f("pop", "popup"), float(r.get("at", 0)) + float(r.get("dur", 1.6)), 0.14) for r in (props.get("routes") or [])[:5]]
         out += [(f("pop", "popup"), float(props["pins_at"]) + 0.05, 0.12)] if props.get("pins_at") is not None else []
+        for key, snd, vol in (("lots_at", ("swipe", "data"), 0.12), ("roads_at", ("swipe", "dwhoosh"), 0.1), ("lift_at", ("whoosh", "charge"), 0.16)):
+            if props.get(key) is not None and float(props[key]) >= 0:
+                out.append((f(*snd), float(props[key]), vol))
         return out + ([(f("ding", "popup"), float(props["rings_at"]) + 0.3, 0.1)] if props.get("rings_at") is not None else [])
+    if comp == "LotCard":  # card slides in, a ding when the price lands
+        at, n = float(props.get("at", 0)), len(props.get("rows") or [])
+        return [(f("whoosh", "dwhoosh"), at, 0.14)] + ([(f("ding", "vclick"), at + 0.45 + n * float(props.get("step", 0.22)), 0.16)] if props.get("price") else [])
     if comp == "Building3D":  # outline swipe, then a soft pop as each block starts rising
         out = [(f("swipe", "dwhoosh"), 0.0, 0.12)]
         return out + [(f("pop", "popup"), float(b.get("at", 0)) + 0.4, 0.1) for b in (props.get("buildings") or [])[:6]]

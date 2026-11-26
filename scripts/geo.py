@@ -161,7 +161,65 @@ def tile(src: str, z: int, x: int, y: int):
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_bytes(data)
     im = Image.open(fp).convert("RGB")
-    return im.resize((256, 256)) if im.size != (256, 256) else im
+    im = im.resize((256, 256)) if im.size != (256, 256) else im
+    if z > 3 and _placeholder(im):  # "Map data not yet available": zoom the parent tile instead
+        par = tile(src, z - 1, x // 2, y // 2)
+        q = par.crop(((x % 2) * 128, (y % 2) * 128, (x % 2) * 128 + 128, (y % 2) * 128 + 128))
+        return q.resize((256, 256), Image.LANCZOS)
+    return im
+
+
+def _placeholder(im) -> bool:
+    import numpy as np
+    a = np.asarray(im, dtype=np.float32)
+    return float(a.std()) < 12 and 185 < float(a.mean()) < 225  # flat light-grey "no imagery" tile
+
+
+# ------------------------------------------------------------------ plots
+DIRS = ["Bắc", "Đông Bắc", "Đông", "Đông Nam", "Nam", "Tây Nam", "Tây", "Tây Bắc"]
+
+
+def fmt_m(v: float) -> str:
+    return (f"{v:.1f}".rstrip("0").rstrip(".") + " m").replace(".", ",")
+
+
+def facing_name(bearing_deg: float) -> str:
+    return DIRS[int(((bearing_deg % 360) + 22.5) // 45) % 8]
+
+
+def make_lots(spec: dict) -> list[dict]:
+    """A row of lots along a frontage: {"front": [[lat, lon], [lat, lon]] (the road edge, lots numbered from the first
+    point), "width_m": 5 (or "widths": [5, 5, 6, …]), "depth_m": 20, "side": "right" | "left" (where the lots lie when
+    walking from front[0] to front[1]), "start": 1, "status": {"3": "sold", "7": "reserved"} (default "available")}.
+    Several rows: a list of such dicts. Each lot gets its facing direction (towards the road)."""
+    rows = spec if isinstance(spec, list) else [spec]
+    out = []
+    for row in rows:
+        (la0, lo0), (la1, lo1) = row["front"]
+        k = math.cos(math.radians(la0))
+        D = 6371008.8 * math.pi / 180  # same sphere as haversine / Web Mercator, so edges read back exactly
+        mx = lambda la, lo: ((lo - lo0) * D * k, (la - la0) * D)  # local metres, x east, y north
+        back = lambda x, y: (la0 + y / D, lo0 + x / (D * k))
+        ex, ey = mx(la1, lo1)
+        L = math.hypot(ex, ey)
+        ux, uy = ex / L, ey / L
+        nx, ny = (uy, -ux) if row.get("side", "right") == "right" else (-uy, ux)
+        depth = float(row.get("depth_m", 20))
+        widths = row.get("widths") or [float(row.get("width_m", 5))] * int(L // float(row.get("width_m", 5)))
+        road_bearing = math.degrees(math.atan2(-nx, -ny))  # from the lot towards the road
+        pos, n0 = 0.0, int(row.get("start", 1))
+        st = {str(a): b for a, b in (row.get("status") or {}).items()}
+        for i, w in enumerate(widths):
+            if pos + w > L + 0.01:
+                break
+            p0 = (ux * pos, uy * pos)
+            p1 = (ux * (pos + w), uy * (pos + w))
+            ring = [p0, p1, (p1[0] + nx * depth, p1[1] + ny * depth), (p0[0] + nx * depth, p0[1] + ny * depth)]
+            lab = str(n0 + i)
+            out.append({"label": lab, "status": st.get(lab, "available"), "w": w, "d": depth, "facing": facing_name(road_bearing),
+                        "ring": [back(*p) for p in ring]})
+            pos += w
+    return out
 
 
 # ------------------------------------------------------------------ build
@@ -205,6 +263,12 @@ def build(spec: dict, outdir: Path, W: int = 1080, H: int = 1920) -> dict:
     S = float(spec.get("scale", 1.5))
     site = spec.get("site") or {}
     ring: list[tuple[float, float]] = []
+    lots = make_lots(spec["lots"]) if spec.get("lots") else []
+    if lots and site.get("lot") is not None:  # the plot for sale is one lot of the subdivision
+        hit = next((l for l in lots if str(l["label"]) == str(site["lot"])), None)
+        if hit:
+            site.setdefault("ring", hit["ring"])
+            site.setdefault("facing", hit["facing"])
     if site.get("ring"):
         ring = [tuple(p) for p in site["ring"]]
     elif site.get("vn2000"):
@@ -238,6 +302,17 @@ def build(spec: dict, outdir: Path, W: int = 1080, H: int = 1920) -> dict:
             a, b = ring[i], ring[(i + 1) % len(ring)]
             edges.append(round(haversine_km(a, b) * 1000, 1))
         res["site"].update({"ring": [[round(u, 9), round(v, 9)] for u, v in pts], "area_m2": round(area, 1), "edges_m": edges})
+        if site.get("facing"):
+            res["site"]["facing"] = site["facing"]
+    if lots:
+        res["lots"] = [{"label": l["label"], "status": l["status"], "w": l["w"], "d": l["d"], "area": round(l["w"] * l["d"], 1),
+                        "facing": l["facing"], "ring": [[round(a, 9), round(b, 9)] for a, b in (merc(*p) for p in l["ring"])]} for l in lots]
+    roads = []
+    for r in spec.get("roads", []):  # a measured road width: two points across the road (from the satellite or the plan)
+        a, b = tuple(r["across"][0]), tuple(r["across"][1])
+        wm = r.get("width_m") or round(haversine_km(a, b) * 1000, 1)
+        roads.append({"a": list(merc(*a)), "b": list(merc(*b)), "width_m": wm, "label": r.get("label") or f"Đường {fmt_m(wm)}"})
+    res["roads"] = roads
     pois = []
     for p in spec.get("pois", []):
         at = p["at"]
@@ -309,7 +384,12 @@ def main():
         W, H = (1080, 1920) if a.aspect == "9:16" else (1920, 1080)
         res = build(json.loads(Path(a.spec).read_text(encoding="utf-8")), Path(a.out), W, H)
         s = res["site"]
-        print(f"[geo] site {s['lat']}, {s['lon']}" + (f" | {s['area_m2'] / 1e4:.1f} ha, {len(s['ring'])} đỉnh" if s.get("ring") else ""))
+        info = ""
+        if s.get("ring"):
+            am = s["area_m2"]
+            size = f"{am / 1e4:.1f} ha" if am >= 5000 else f"{am:.1f} m²"
+            info = f" | {size}, {len(s['ring'])} đỉnh, cạnh {s['edges_m']}" + (f", hướng {s['facing']}" if s.get("facing") else "")
+        print(f"[geo] site {s['lat']}, {s['lon']}{info}")
         for p in res["pois"]:
             print(f"[geo]   {p['name']}: {p.get('km', p['km_air'])} km" + (f", ~{p['min']} phút" if p.get("min") else " (đường chim bay)"))
         print(f"[geo] -> {Path(a.out) / 'geomap.json'}")
