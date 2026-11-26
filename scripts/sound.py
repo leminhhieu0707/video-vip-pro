@@ -357,4 +357,20 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
         if sum(1 for k in kept[-6:] if e[1] - k[1] < 0.5) >= 3:
             continue
         kept.append(e)
-    return kept
+    # premium / calm mixes: "gain" scales every effect sound, "min_gap" keeps at most one sound per gap (the loudest wins),
+    # "only" keeps just these families (e.g. ["whoosh", "hit", "ding"]) — real-estate edits want few, soft sounds
+    g = float(opts.get("gain", 1.0))
+    gap = float(opts.get("min_gap", 0.0))
+    only = set(opts.get("only") or [])
+    if only:
+        kept = [e for e in kept if e[0] in only]
+    if gap > 0:
+        thin: list[tuple[str, float, float]] = []
+        for e in kept:
+            if thin and e[1] - thin[-1][1] < gap:
+                if e[2] > thin[-1][2]:
+                    thin[-1] = e
+                continue
+            thin.append(e)
+        kept = thin
+    return [(f, t, round(v * g, 4)) for f, t, v in kept]
