@@ -460,8 +460,40 @@ Type scale on a 1080-wide frame (never smaller on a phone video): number 190–2
 
 **Make it ours, not a copy of the reference reels:** pick the tone from the project's brand (`champagne` + navy cards for Masterise-type luxury, `copper` for warm resort / green projects, `gold`, `brand` = the plan theme); always add something the references lack: a plain-language `compare` under area numbers, real measured travel times on pins, counting numbers, numbers standing behind towers (`"behind": "sky"`). Tones apply to `StatTitle`, `TagLabel`, `CtaChecklist`, `StepTimeline` and GeoMap `tone`.
 
-Icons: pin, home, cart, star, bridge, wave, plane, school, hospital, tree, train, flag, tag, plan, calendar, chat, key, pool, check.
+Icons: pin, home, cart, star, bridge, wave, plane, school, hospital, tree, train, flag, tag, plan, calendar, chat, key, pool, check, search, chart, money, users, bolt, shield, heart, car, clock, sun, doc, phone.
 Story order that works: hook number or location → map + pins (tiện ích, khoảng cách) → quy mô / mật độ / cảnh quan numbers on the project → tiện ích + phân khu tags → căn hộ / tầng → giá từ → chính sách thanh toán → CTA checklist → contact.
+
+## PlotSpotlight — the plot shot that is ours (`Estate.tsx`, 11/2026)
+
+The trend plot edits (glow outline, B&W outside, "ground lifting", call-outs) each do one trick. `PlotSpotlight` tells the plot in three beats on real footage (flycam, GES, or `tools/make_flycam.py`-style virtual flycam over the satellite mosaic):
+1. the world drains to B&W (`desat`, `dim`) while the plot keeps its colour and a light runs the boundary (`draw_at`, `draw`);
+2. the plot **lifts out of the ground as a slab** (`lift_at`, `lift` px ≈ 110, `walls` soil / glass / gold, soft shadow) and a `GlassPin` stands on it (`label {name, kicker, meta, photo, icon}`);
+3. its outline **peels off and flies up into a "Thông tin khu đất" sheet** (`sheet_at`, `sheet {title, value, unit, rows [[k, v]], shape (top-down, any units), edges ["71 m", ""…], facing}`): the same shape with edge lengths, the area number, 3–4 rows.
+
+| prop | note |
+|---|---|
+| `ring` | plot polygon, 0–1 of the frame at the overlay start (convex or not, ≤ ~12 points) |
+| `track {corners}` | 4 ground points around the plot (≈ 2× the plot); render.py fills `frames` with `footage.track_plane` |
+| `src` | leave empty: render.py cuts this overlay's footage from the timeline and the comp redraws it (that is how B&W-outside and the lifted slab show the real ground) |
+| `ground {text, sub}` | optional name painted flat on the plot before the lift |
+
+Rules: 6–8 s per use, once per video (it is the hero shot); every number on the sheet from the brochure / geo.py (edges measured on the map → add a small "đo trên bản đồ, tham khảo" credit). Skip the lift when the footage is too oblique (< 25° from the horizon) — the walls look fake.
+
+## NARRATE pack — cutaway scenes for talking heads (`src/blue/Narrate.tsx`, any industry)
+
+Learnt from the top talking-head editors (11/2026): every 6–10 s the picture cuts to a clean canvas where the idea is *drawn* (search bar typing, numbered icon tiles on a ribbon, icons orbiting a word, before → after numbers, a step card) while the voice keeps going. Their cutaways drop the face; **ours keeps the speaker alive in a bubble**: a circle closes around the face (iris), flies to the corner, the canvas builds, then the bubble grows back to full frame. That is the signature — trend, but nobody else does it.
+
+`ExplainCanvas` props: `mode` search | tiles | orbit | compare | card, `title` ("Chỉ cần **một câu lệnh**": `**word**` = accent serif italic), `bg` paper | dark | brand, `accent` (brand colour), `face` [x, y] (face centre 0–1, = FACE of the builder), `bubble {x, y, r, s}`, `keep_face` (false = full cutaway), `back` (grow back at the end), `at` (content clock start, 0.45).
+
+| mode | data | put it on |
+|---|---|---|
+| `search` | `query`, `items` (3 result rows) | "khách đang tìm…", "gõ một câu lệnh", any "people google this" line |
+| `tiles` | `items [{icon, label, t}]` ≤ 4, `t` = second the word is spoken | a spoken list ("1… 2… 3…", features, steps); sync each `t` to the word |
+| `orbit` | `center`, `items [{icon \| photo, label}]` ≤ 7 | "một thứ cho tất cả…", ecosystems, "phù hợp mọi ngành" |
+| `compare` | `a {label, value, photo \| icon}`, `b {…}` (values count up) | before / after, tự làm vs có dịch vụ, giá cũ vs giá mới |
+| `card` | `kicker` ("BƯỚC 01"), `text` | one key step or promise |
+
+Rules: 3–5 s each, at most one per 8 s, never two of the same mode in a row; drop the caption while it is on screen (the title is the caption); alternate `bg` (paper → dark → brand) through the video. Icons (shared with ESTATE): pin, home, cart, star, bridge, wave, plane, school, hospital, tree, train, flag, tag, plan, calendar, chat, key, pool, check, search, chart, money, users, bolt, shield, heart, car, clock, sun, doc, phone.
 
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.

@@ -756,6 +756,7 @@ def frost_layer(o: dict, k: int, vlast: str, fc: list[str], starts: list[float],
 
 
 RING_COMPS = {"OrbitRing", "Portal", "OrbitCarousel", "WeaveText"}
+SRC_COMPS = {"PlotSpotlight", "ExplainCanvas"}  # get their own footage segment as props.src
 
 
 def resolve_stills(v, work: Path, width: int = 1080):
@@ -913,7 +914,16 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
         if o.get("comp") == "TrackLabel" and isinstance(o["props"].get("track"), dict):
             s, e = overlay_times(o, starts, total)
             o["props"]["track"] = track_box(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work)
-        if o.get("comp") == "TrackedPlot" and isinstance(o["props"].get("track"), dict) and not o["props"].get("frames"):
+        if o.get("comp") in SRC_COMPS and not o["props"].get("src"):  # comps that redraw the footage themselves (B&W outside, live face bubble)
+            s, e = overlay_times(o, starts, total)
+            kb = f"{(work / 'base.mp4').stat().st_mtime_ns}|{s:.3f}|{e:.3f}".encode()
+            seg = work / "motion_src" / f"seg_{hashlib.md5(kb).hexdigest()[:12]}.mp4"
+            if not seg.exists():
+                seg.parent.mkdir(parents=True, exist_ok=True)
+                run([FFMPEG, "-v", "error", "-y", "-ss", f"{s:.3f}", "-i", str(work / "base.mp4"), "-t", f"{e - s + 0.1:.3f}", "-an",
+                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-pix_fmt", "yuv420p", str(seg)])
+            o["props"]["src"] = str(seg)
+        if o.get("comp") in ("TrackedPlot", "PlotSpotlight") and isinstance(o["props"].get("track"), dict) and not o["props"].get("frames"):
             import footage  # noqa: E402
             s, e = overlay_times(o, starts, total)
             o["props"]["frames"] = footage.track_plane(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work,

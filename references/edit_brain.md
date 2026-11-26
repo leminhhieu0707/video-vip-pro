@@ -34,6 +34,12 @@ The worst VIP edit is the same sequence on every video: hook zoom → frost → 
 
 **Text pack:** at most one "hero" text effect per 15–20 s (Text3D, WeaveText, MetalText, GlassText, PunchWord, RaysTitle); everything else stays the two-tier captions. Match the channel: shop → MetalText / Odometer / SealBadge / CubeFlip / TrackLabel; documentaries → DocLabel / QuoteCard / FocusText; drama → RansomText / DustText; AI → AIChat / NeonText / GlassText. Never stack two text effects at once.
 
+**Narrator cutaways (NARRATE pack, any industry):** a talking head longer than 20 s gets 2–4 `ExplainCanvas` scenes on the lines that explain something (a list → `tiles`, "people search for…" → `search`, before/after → `compare`, one key step → `card`). The speaker stays in the live bubble — that is our signature versus the trend editors who cut the face away.
+
+**One metaphor thread (learnt from the top RE shorts):** when the script has an image ("đầu tư như chơi bài", "chìa khoá", "đường đua"), carry that one metaphor through the whole video (a sticker / 3D object / sound that comes back 3–4 times) instead of unrelated effects. It is what makes a reel feel designed.
+
+**Plot / project hero shot:** for a plot, a land lot or a project site on footage, use `PlotSpotlight` once (B&W world → slab lift → info sheet) instead of TrackedPlot + LotCard separately.
+
 **Studio Look:** when the room looks flat, dim or empty, add `"color_match": true`, one `relight` preset that suits the brand (shop / luxury → `bright_luxe`, café / F&B / lifestyle → `warm_cafe`, story / drama channels → `cine_dark`, education / spa → `soft_window`) and one or two props in empty corners. Keep the speaker's skin natural; check a still before the full render.
 
 ## 3. Variety rules (check before rendering)

@@ -270,6 +270,30 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
     if comp == "CtaChecklist":
         at, st = float(props.get("at", 0.1)), float(props.get("step", 0.35))
         return [(f("whoosh", "dwhoosh"), at, 0.14)] + [(f("pop", "popup"), at + 0.4 + i * st, 0.12) for i in range(len(props.get("items") or []))]
+    if comp == "PlotSpotlight":  # boundary runs (swipe), closes (sparkle), the slab lifts (soft thump), the outline flies into the sheet
+        da, dr = float(props.get("draw_at", 0.35)), float(props.get("draw", 1.3))
+        out = [(f("swipe", "dwhoosh"), da, 0.1), (f("sparkle", "flash"), da + dr, 0.1)]
+        if props.get("lift_at") is not None:
+            out.append((f("hit", "thump"), float(props["lift_at"]) + 0.1, 0.12))
+        if props.get("sheet_at") is not None:
+            sa = float(props["sheet_at"])
+            out += [(f("whoosh", "dwhoosh"), sa, 0.12), (f("ding", "vclick"), sa + 1.0, 0.12)]
+        return out
+    if comp == "ExplainCanvas":  # speaker shrinks (whoosh), the idea builds (one sound per beat, quiet), speaker grows back
+        at, mode, n = float(props.get("at", 0.45)), props.get("mode", "tiles"), len(props.get("items") or [])
+        out = [(f("whoosh", "dwhoosh"), 0.0, 0.12)]
+        if mode == "search":
+            out += [(f("keyboard", "data"), at, 0.1), (f("pop", "popup"), at + len(str(props.get("query", ""))) / 16 + 0.25, 0.1)]
+        elif mode == "tiles":
+            its = (props.get("items") or [])[:4]
+            out += [(f("pop", "popup"), float(it["t"]) if isinstance(it, dict) and it.get("t") is not None else at + 0.15 + i * 0.32, 0.1) for i, it in enumerate(its)]
+        elif mode == "compare":
+            out += [(f("pop", "popup"), at + 0.1, 0.1), (f("ding", "vclick"), at + 1.0, 0.12)]
+        else:
+            out.append((f("pop", "popup"), at, 0.1))
+        if props.get("back", True):
+            out.append((f("whoosh", "dwhoosh"), max(0.0, dur - 0.5), 0.1))
+        return out
     if comp == "TagLabel":
         return [(f("pop", "popup"), float(props.get("at", 0)), 0.14)]
     if comp == "LuxLabel":

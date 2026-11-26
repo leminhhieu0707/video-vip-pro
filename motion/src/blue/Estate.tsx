@@ -7,7 +7,7 @@
 //               walls rise ("2D → 3D").
 // All full-screen. Lengths are metres; the 3D comps use a small perspective projector (no WebGL), so they render fast.
 import React from 'react';
-import {AbsoluteFill, continueRender, delayRender, Img, interpolate, spring, staticFile} from 'remotion';
+import {AbsoluteFill, continueRender, delayRender, Img, interpolate, OffthreadVideo, spring, staticFile} from 'remotion';
 import {EASE_IN, EASE_OUT, exit, SANS, SERIF, T} from './theme';
 import {CL, lerp, P, useT} from './Vip';
 
@@ -89,7 +89,7 @@ const MARK: Record<string, [string, string, string]> = {copper: ['#B07A55', '#6E
 const metalText = (g: string): React.CSSProperties => ({backgroundImage: g, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
   WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.55)) drop-shadow(0 1px 1px rgba(0,0,0,0.6))'});
 /** tiny line icons for pins / checklists (24×24, white) */
-const ICON: Record<string, string> = {
+export const ICON: Record<string, string> = {
   pin: 'M12 3a6 6 0 016 6c0 4.5-6 11-6 11S6 13.5 6 9a6 6 0 016-6zm0 3.5A2.5 2.5 0 1012 11.5 2.5 2.5 0 0012 6.5z',
   cart: 'M4 5h2l2 10h9l2-7H7M10 19a1 1 0 100 .1M17 19a1 1 0 100 .1', star: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z',
   bridge: 'M3 16h18M5 16V10m14 6v-6M3 10c4 0 5-4 9-4s5 4 9 4M9 16v-3m6 3v-3', wave: 'M3 14c2 0 2-2 4.5-2S10 14 12 14s2-2 4.5-2S19 14 21 14M3 18c2 0 2-2 4.5-2S10 18 12 18s2-2 4.5-2S19 18 21 18',
@@ -98,7 +98,13 @@ const ICON: Record<string, string> = {
   flag: 'M6 21V4m0 0h11l-2 4 2 4H6', tag: 'M3 12l9-9h8v8l-9 9zM16 8a1 1 0 100 .1', plan: 'M4 4h16v16H4zM4 12h8V4M12 16h8',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', chat: 'M4 5h16v11H9l-5 4z', key: 'M8 14a4 4 0 114-4l8 0v3h-2v2h-3v-2h-3a4 4 0 01-4 1z',
   pool: 'M3 17c2 0 2-1.5 4.5-1.5S10 17 12 17s2-1.5 4.5-1.5S19 17 21 17M7 14V5a2 2 0 014 0M13 14V5a2 2 0 014 0M7 8h6M7 11h6',
-  home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z', check: 'M5 12l4 4 10-10'};
+  home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z', check: 'M5 12l4 4 10-10', search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-5-5',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2', money: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM6 10v4M18 10v4',
+  users: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2 20c0-3.5 3-6 7-6s7 2.5 7 6M16 4.5a3.5 3.5 0 010 6.5M18 14c2.5.7 4 2.8 4 6',
+  bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', heart: 'M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z',
+  car: 'M5 16V11l2-5h10l2 5v5M5 16h14M7 16v2M17 16v2M7.5 12.5h.01M16.5 12.5h.01', clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
+  sun: 'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',
+  doc: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5', phone: 'M8 3h8v18H8zM11 18h2'};
 const Icon24: React.FC<{name?: string; size?: number; color?: string}> = ({name = 'pin', size = 24, color = '#fff'}) =>
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
     <path d={ICON[name] || ICON.pin} /></svg>;
@@ -1222,4 +1228,161 @@ export const TagLabel: React.FC<P> = ({duration, name = 'NHÃN', kicker, meta, p
   </AbsoluteFill>;
 };
 
-export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot, LuxLabel, StatTitle, StepTimeline, CtaChecklist, TagLabel};
+// ================================================================ PlotSpotlight
+/** n points evenly spaced along a closed outline (so two different shapes can morph point by point) */
+function resample(poly: number[][], n: number): number[][] {
+  const pts = [...poly, poly[0]];
+  return Array.from({length: n}, (_, i) => { const a = along(pts, i / n); return [a[0], a[1]]; });
+}
+const signedArea = (p: number[][]) => p.reduce((s, q, i) => { const r = p[(i + 1) % p.length]; return s + q[0] * r[1] - r[0] * q[1]; }, 0) / 2;
+/** rotate / flip B so its points line up with A (same winding, least total travel) — the morph then looks like one line moving */
+function alignTo(A: number[][], B: number[][]): number[][] {
+  let b = signedArea(A) * signedArea(B) < 0 ? [...B].reverse() : B;
+  const ca = centroid(A), cb = centroid(b);
+  let best = 0, bestD = Infinity;
+  for (let k = 0; k < b.length; k++) {
+    let d = 0;
+    for (let i = 0; i < A.length; i += 3) { const q = b[(i + k) % b.length]; d += Math.hypot(A[i][0] - ca[0] - (q[0] - cb[0]), A[i][1] - ca[1] - (q[1] - cb[1])); }
+    if (d < bestD) { bestD = d; best = k; }
+  }
+  return b.map((_, i) => b[(i + best) % b.length]);
+}
+/**
+ * PlotSpotlight — a plot on real footage (flycam / GES), told in three beats:
+ *   1. the world around it drains to black & white while the plot keeps its colour, and a light runs the boundary;
+ *   2. the plot LIFTS out of the ground like a cut slab (soil / glass / gold walls + a soft shadow), a glass name card
+ *      stands on it;
+ *   3. its outline peels off the ground and flies up into a "Thông tin khu đất" sheet: the same shape, edge lengths,
+ *      area, facing and short rows.
+ * src = this overlay's own footage (render.py cuts it from the timeline when src is omitted), frames = per-frame
+ * homographies (render.py tracks them from `track`), ring = plot polygon in 0–1 of the frame at the overlay start.
+ * sheet = {title, value, unit, rows: [[k, v]…], shape: [[x, y]…] (top-down, any units; default = ring), edges: ["20 m"…],
+ *          facing}
+ */
+export const PlotSpotlight: React.FC<P> = ({duration, src, frames = [], track = {}, ring, desat_at = 0.1, desat = 0.92, dim = 0.22,
+  draw_at = 0.35, draw = 1.3, lift_at, lift = 110, walls = 'soil', ground, label, label_at, sheet, sheet_at, color = '#F3D28B', tone = 'ivory'}) => {
+  const {frame, fps, t, W, H} = useT();
+  const M = frames.length ? frames[Math.min(frame, frames.length - 1)] : [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  const ref = (ring || track.corners || [[0.3, 0.55], [0.7, 0.55], [0.72, 0.72], [0.28, 0.72]]).map((q: number[]) => [q[0] * W, q[1] * H]);
+  const P2 = (q: number[]) => {
+    const w = M[6] * q[0] + M[7] * q[1] + M[8];
+    return [(M[0] * q[0] + M[1] * q[1] + M[2]) / w, (M[3] * q[0] + M[4] * q[1] + M[5]) / w];
+  };
+  const rp = ref.map(P2);
+  const c = centroid(rp);
+  const a0 = P2(centroid(ref)), a1 = P2([centroid(ref)[0] + 10, centroid(ref)[1]]), a2 = P2([centroid(ref)[0], centroid(ref)[1] + 10]);
+  const sc = Math.sqrt(Math.abs((a1[0] - a0[0]) * (a2[1] - a0[1]) - (a1[1] - a0[1]) * (a2[0] - a0[0]))) / 10;
+  const gs = lerp(t, desat_at, desat_at + 0.7, 0, 1, (x) => smooth(x));
+  const dp = lerp(t, draw_at, draw_at + draw, 0, 1, (x) => smooth(x));
+  const after = lerp(t, draw_at + draw, draw_at + draw + 0.5);
+  const lp = lift_at != null ? spring({frame: frame - lift_at * fps, fps, config: {damping: 15, stiffness: 90, mass: 0.9}}) : 0;
+  const sp = sheet && sheet_at != null ? lerp(t, sheet_at, sheet_at + 1.1, 0, 1, (x) => smooth(x)) : 0;
+  const h = lift * sc * lp;
+  const up = rp.map((q: number[]) => [q[0], q[1] - h]);
+  const o = exit(frame, fps, duration, 0.3);
+  const acc = ACCENT[tone] || color;
+  const vid = (style: React.CSSProperties) => src
+    ? <OffthreadVideo src={url(src)} muted style={{position: 'absolute', left: 0, top: 0, width: W, height: H, objectFit: 'cover', ...style}} /> : null;
+  const clip = `polygon(${rp.map((q: number[]) => `${q[0].toFixed(1)}px ${q[1].toFixed(1)}px`).join(',')})`;
+  const L = pathLen([...up, up[0]]);
+  const d = up.map((q: number[]) => q.join(',')).join(' ');
+  const WALL: Record<string, [string, string]> = {soil: ['#A8774A', '#3A2412'], glass: ['rgba(190,220,255,0.55)', 'rgba(40,70,110,0.75)'], gold: ['#E7C27A', '#5E4318']};
+  const wc = WALL[walls] || WALL.soil;
+  // walls: edges whose outward normal faces the camera (points down the screen), far ones first
+  const wallQuads = h > 0.5 ? rp.map((a: number[], i: number) => {
+    const b = rp[(i + 1) % rp.length];
+    let nx = -(b[1] - a[1]), ny = b[0] - a[0]; // edge normal, flipped to point away from the plot centre
+    if (nx * ((a[0] + b[0]) / 2 - c[0]) + ny * ((a[1] + b[1]) / 2 - c[1]) < 0) { nx = -nx; ny = -ny; }
+    return ny > 0 ? {i, a, b, y: (a[1] + b[1]) / 2, shade: Math.min(1, ny / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1))} : null;
+  }).filter(Boolean).sort((p: any, q: any) => p.y - q.y) as any[] : [];
+  // the sheet (beat 3)
+  let sheetEl: React.ReactNode = null, morph: React.ReactNode = null;
+  if (sheet && sp > 0) {
+    const cw = W * 0.88, ch = H * 0.3, cx0 = (W - cw) / 2, cy0 = H * 0.075, box = ch - 70;
+    const shp: number[][] = sheet.shape && sheet.shape.length > 2 ? sheet.shape : ref;
+    const xs = shp.map((q) => q[0]), ys = shp.map((q) => q[1]);
+    const bw = Math.max(...xs) - Math.min(...xs) || 1, bh = Math.max(...ys) - Math.min(...ys) || 1, k = box / Math.max(bw, bh);
+    const ox = cx0 + 40 + (box - bw * k) / 2 - Math.min(...xs) * k, oy = cy0 + 35 + (box - bh * k) / 2 - Math.min(...ys) * k;
+    const tgt = shp.map((q) => [ox + q[0] * k, oy + q[1] * k]);
+    const N = 96, A = resample(up, N), B = alignTo(A, resample(tgt, N));
+    const mid = A.map((q, i) => [q[0] + (B[i][0] - q[0]) * sp, q[1] + (B[i][1] - q[1]) * sp - Math.sin(sp * Math.PI) * H * 0.06]);
+    const cardP = lerp(t, sheet_at + 0.55, sheet_at + 1.0, 0, 1, (x) => smooth(x));
+    const rowP = (i: number) => lerp(t, sheet_at + 0.95 + i * 0.16, sheet_at + 1.3 + i * 0.16);
+    const tc = centroid(tgt);
+    morph = <svg width={W} height={H} style={{position: 'absolute', inset: 0}}>
+      <polygon points={mid.map((q) => q.join(',')).join(' ')} fill="#C9A24E" fillOpacity={0.22 * cardP} stroke={cardP > 0.5 ? '#A57C2C' : acc} strokeWidth={cardP > 0.5 ? 5 : 6}
+        strokeLinejoin="round" filter={cardP > 0.5 ? undefined : 'url(#psglow)'} />
+      {cardP > 0.5 ? tgt.map((q, i) => <circle key={`v${i}`} cx={q[0]} cy={q[1]} r={7} fill="#fff" stroke="#A57C2C" strokeWidth={3} opacity={rowP(0)} />) : null}
+      {cardP > 0.5 ? (sheet.edges || []).map((e: string, i: number) => {
+        const p = tgt[i], q = tgt[(i + 1) % tgt.length];
+        if (!p || !q || !e) return null;
+        const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, nx = mx - tc[0], ny = my - tc[1], nl = Math.hypot(nx, ny) || 1;
+        return <text key={i} x={mx + nx / nl * 26} y={my + ny / nl * 26 + 9} textAnchor="middle" fontFamily={SANS} fontWeight={700} fontSize={25}
+          fill="#3B2F1C" opacity={rowP(0)}>{e}</text>;
+      }) : null}
+    </svg>;
+    sheetEl = <div style={{position: 'absolute', left: cx0, top: cy0, width: cw, height: ch, borderRadius: 28, opacity: cardP, transform: `translateY(${(1 - cardP) * 30}px)`,
+      background: 'linear-gradient(165deg, rgba(253,250,242,0.97), rgba(240,232,214,0.96))', border: `1.5px solid ${acc}`,
+      boxShadow: '0 24px 60px rgba(0,0,0,0.45), inset 0 1px 0 #fff'}}>
+      <div style={{position: 'absolute', left: box + 80, right: 36, top: 34, display: 'flex', flexDirection: 'column', gap: 10}}>
+        <div style={{fontFamily: SANS, fontWeight: 700, fontSize: 22, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#9A7A3E'}}>{sheet.title || 'Thông tin khu đất'}</div>
+        {sheet.value ? <div style={{display: 'flex', alignItems: 'baseline', gap: 12, opacity: rowP(0)}}>
+          <span style={{fontFamily: SANS, fontWeight: 800, fontSize: 104, lineHeight: 0.95, color: '#141A26', letterSpacing: '-0.02em'}}>{sheet.value}</span>
+          <span style={{fontFamily: SANS, fontWeight: 700, fontSize: 44, color: '#9A7A3E'}}>{sheet.unit}</span></div> : null}
+        <div style={{width: 80 * rowP(0), height: 3, background: acc, borderRadius: 3, margin: '2px 0 6px'}} />
+        {(sheet.rows || []).slice(0, 4).map((r: string[], i: number) => <div key={i} style={{display: 'flex', justifyContent: 'space-between', gap: 16,
+          fontFamily: SANS, fontSize: 28, opacity: rowP(i + 1), transform: `translateX(${(1 - rowP(i + 1)) * 16}px)`, borderBottom: '1px solid rgba(60,45,20,0.12)', paddingBottom: 6}}>
+          <span style={{color: '#6B5B40', fontWeight: 500}}>{r[0]}</span><span style={{color: '#141A26', fontWeight: 800}}>{r[1]}</span></div>)}
+      </div>
+      {sheet.facing ? <div style={{position: 'absolute', left: 40, bottom: 18, display: 'flex', alignItems: 'center', gap: 8, fontFamily: SANS, fontWeight: 700, fontSize: 22,
+        color: '#6B5B40', opacity: rowP(1)}}>
+        <svg width={26} height={26} viewBox="0 0 24 24"><path d="M12 2l4 10h-8z" fill="#B0412E" /><path d="M12 22l-4-10h8z" fill="#6B5B40" /></svg>{sheet.facing}</div> : null}
+    </div>;
+  }
+  return <AbsoluteFill style={{opacity: o}}>
+    {vid({filter: `grayscale(${desat * gs}) brightness(${1 - dim * gs}) contrast(${1 + 0.06 * gs})`})}
+    <svg width={W} height={H} style={{position: 'absolute', inset: 0}}>
+      <defs>
+        <filter id="psglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="psshadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation={10 + h * 0.15} /></filter>
+        <linearGradient id="pswall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={wc[0]} /><stop offset="1" stopColor={wc[1]} /></linearGradient>
+      </defs>
+      {h > 0.5 ? <polygon points={rp.map((q: number[]) => `${q[0] + h * 0.25},${q[1] + h * 0.18}`).join(' ')} fill="#000" opacity={0.5 * lp} filter="url(#psshadow)" /> : null}
+      {wallQuads.map((w: any) => <g key={w.i}>
+        <polygon points={`${w.a[0]},${w.a[1]} ${w.b[0]},${w.b[1]} ${w.b[0]},${w.b[1] - h} ${w.a[0]},${w.a[1] - h}`} fill="url(#pswall)" />
+        <polygon points={`${w.a[0]},${w.a[1]} ${w.b[0]},${w.b[1]} ${w.b[0]},${w.b[1] - h} ${w.a[0]},${w.a[1] - h}`} fill="#000" opacity={0.35 * (1 - w.shade)} />
+        {walls === 'soil' ? Array.from({length: 3}, (_, s) => <line key={s} x1={w.a[0]} y1={w.a[1] - h * (0.3 + s * 0.22)} x2={w.b[0]} y2={w.b[1] - h * (0.3 + s * 0.22)}
+          stroke="rgba(0,0,0,0.25)" strokeWidth={1.5} />) : null}
+      </g>)}
+    </svg>
+    <div style={{position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `translateY(${-h}px)`, clipPath: clip, WebkitClipPath: clip}}>
+      {vid({filter: `saturate(${1 + 0.08 * gs}) brightness(${1 + 0.04 * gs})`})}
+    </div>
+    <svg width={W} height={H} style={{position: 'absolute', inset: 0, opacity: 1 - sp * 0.75}}>
+      <polygon points={d} fill={acc} fillOpacity={0.04 * after} />
+      <polygon points={d} fill="none" stroke={acc} strokeWidth={5} strokeLinejoin="round" strokeDasharray={`${L * dp} ${L}`} filter="url(#psglow)" />
+      <polygon points={d} fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" strokeDasharray={`${L * 0.04} ${L}`}
+        strokeDashoffset={-((L * (dp < 1 ? dp : 1 + (t - draw_at - draw) * 0.25)) % L)} filter="url(#psglow)" />
+    </svg>
+    {ground ? <div style={{position: 'absolute', left: 0, top: -h, width: W, height: H, transformOrigin: '0 0', opacity: after * (1 - sp),
+      transform: `matrix3d(${M[0]},${M[3]},0,${M[6]},${M[1]},${M[4]},0,${M[7]},0,0,1,0,${M[2]},${M[5]},0,${M[8]})`}}>
+      <div style={{position: 'absolute', left: centroid(ref)[0], top: centroid(ref)[1], transform: 'translate(-50%,-50%)', textAlign: 'center', whiteSpace: 'nowrap',
+        textShadow: '0 2px 14px rgba(0,0,0,0.7)'}}>
+        <div style={{...LUX.cap, fontSize: ground.size || 58, color: '#fff', paddingLeft: '0.26em'}}>{ground.text}</div>
+        {ground.sub ? <div style={{...LUX.num, fontSize: (ground.size || 58) * 0.72, color: acc}}>{ground.sub}</div> : null}
+      </div>
+    </div> : null}
+    {label ? (() => {
+      const la = label_at ?? (lift_at != null ? lift_at + 0.35 : draw_at + draw);
+      const pg = spring({frame: frame - la * fps, fps, config: {damping: 14, stiffness: 140, mass: 0.7}});
+      const top = Math.min(...up.map((q: number[]) => q[1]));
+      return pg > 0.01 ? <div style={{position: 'absolute', left: c[0] + (label.dx || 0), top: top - 6 + (label.dy || 0), transform: 'translate(-50%,-100%)', opacity: 1 - sp}}>
+        <GlassPin name={label.name} kicker={label.kicker} meta={label.meta} photo={label.photo} icon={label.icon || 'home'} tone={tone} p={pg} t={t - la} leader={60} />
+      </div> : null;
+    })() : null}
+    {sheetEl}
+    {morph}
+  </AbsoluteFill>;
+};
+
+export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot, LuxLabel, StatTitle, StepTimeline, CtaChecklist, TagLabel, PlotSpotlight};
