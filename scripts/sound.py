@@ -294,6 +294,8 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
         if props.get("back", True):
             out.append((f("whoosh", "dwhoosh"), max(0.0, dur - 0.5), 0.1))
         return out
+    if comp == "RunTitle":  # a soft swipe as the letters rise
+        return [(f("swipe", "data"), float(props.get("at", 0.05)) + 0.15, 0.09)]
     if comp == "TagLabel":
         return [(f("pop", "popup"), float(props.get("at", 0)), 0.14)]
     if comp == "LuxLabel":
@@ -330,6 +332,7 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
     viral = (opts.get("style") if opts else sd) == "viral"
     smap, tmap, fmap = (VIRAL_MAP, VIRAL_TYPE, VIRAL_FX) if viral else (SOUND_MAP, TYPE_MAP, FX_MAP)
     out = []
+    keep_comps, keep_set = set(opts.get("keep") or []), set()
     if opts.get("cuts"):
         clips = plan.get("clips", []) or []
         for i in range(1, len(clips)):
@@ -358,6 +361,8 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
             lay = trend_timed(comp, o.get("props") or {}, od, viral) or lay
         for fam, off, vol in lay:
             out.append((fam, t0 + off, vol))
+            if comp in keep_comps:  # hero effects keep their full sound design through the calm filters below
+                keep_set.add((fam, round(t0 + off, 3)))
         # list items that pop in one by one get one sound each
         props = o.get("props") or {}
         if ty == "motion" and comp in ("Tiles", "Checklist", "NotifyStack", "ChatBubbles", "CommentsDrop", "Callouts", "IconSlam"):
@@ -376,24 +381,34 @@ def design(plan: dict, starts: list[float]) -> list[tuple[str, float, float]]:
     out.sort(key=lambda e: e[1])
     kept: list[tuple[str, float, float]] = []
     for e in out:
+        if (e[0], round(e[1], 3)) in keep_set:
+            kept.append(e)
+            continue
         if any(k[0] == e[0] and abs(k[1] - e[1]) < 0.3 for k in kept[-6:]):
             continue
         if sum(1 for k in kept[-6:] if e[1] - k[1] < 0.5) >= 3:
             continue
         kept.append(e)
     # premium / calm mixes: "gain" scales every effect sound, "min_gap" keeps at most one sound per gap (the loudest wins),
-    # "only" keeps just these families (e.g. ["whoosh", "hit", "ding"]) — real-estate edits want few, soft sounds
+    # "only" keeps just these families (e.g. ["whoosh", "hit", "ding"]) — real-estate edits want few, soft sounds;
+    # "keep": ["PlotSpotlight"] = comps whose own sounds always survive these filters
     g = float(opts.get("gain", 1.0))
     gap = float(opts.get("min_gap", 0.0))
     only = set(opts.get("only") or [])
+    held = lambda e: (e[0], round(e[1], 3)) in keep_set
     if only:
-        kept = [e for e in kept if e[0] in only]
+        kept = [e for e in kept if e[0] in only or held(e)]
     if gap > 0:
         thin: list[tuple[str, float, float]] = []
         for e in kept:
-            if thin and e[1] - thin[-1][1] < gap:
+            if held(e):
+                thin.append(e)
+                continue
+            if thin and e[1] - thin[-1][1] < gap and not held(thin[-1]):
                 if e[2] > thin[-1][2]:
                     thin[-1] = e
+                continue
+            if thin and e[1] - thin[-1][1] < gap:
                 continue
             thin.append(e)
         kept = thin

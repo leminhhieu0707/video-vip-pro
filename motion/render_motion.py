@@ -28,7 +28,7 @@ CACHE_ROOT = Path(os.environ["MH_MOTION_CACHE"]) if os.environ.get("MH_MOTION_CA
 PUBLIC_IN = HERE / "public" / "_in"
 IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".mp4", ".mov", ".webm", ".m4v"}  # videos: B-roll inside HUD cards
 COMPS = {"HudChapter", "NeonTunnel",  # HUD pack (src/blue/Hud.tsx)
-         "GeoMap", "Building3D", "FloorPlan2D", "LotCard", "GlobeIntro", "KnockoutText", "InvertTitle", "LensFlare", "TrackedPlot", "LuxLabel", "StatTitle", "StepTimeline", "CtaChecklist", "TagLabel", "PlotSpotlight",  # ESTATE pack (src/blue/Estate.tsx)
+         "GeoMap", "Building3D", "FloorPlan2D", "LotCard", "GlobeIntro", "KnockoutText", "InvertTitle", "LensFlare", "TrackedPlot", "LuxLabel", "StatTitle", "StepTimeline", "CtaChecklist", "TagLabel", "PlotSpotlight", "RunTitle",  # ESTATE pack (src/blue/Estate.tsx)
          "ExplainCanvas",  # NARRATE pack (src/blue/Narrate.tsx)
          "Text3D", "WeaveText", "ProjectText", "MetalText", "GlassText", "NeonText", "WriteOn", "SliceText", "WeightPulse", "DustText", "PunchWord", "DocLabel", "QuoteCard", "MarqueeRows", "TrackLabel", "RiseText", "MirrorText", "FocusText", "Odometer", "SealBadge", "CubeFlip", "RaysTitle", "InkText", "RansomText", "AIChat", "BeatText",  # TEXT pack (src/blue/Text.tsx)
          "NameTag", "PriceSlash", "Receipt", "MapPin", "DecodeText", "Countdown", "EvidenceBoard", "Audiogram",  # TREND pack (src/blue/Trend.tsx)

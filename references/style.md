@@ -468,7 +468,7 @@ Story order that works: hook number or location → map + pins (tiện ích, kho
 The trend plot edits (glow outline, B&W outside, "ground lifting", call-outs) each do one trick. `PlotSpotlight` tells the plot in three beats on real footage (flycam, GES, or `tools/make_flycam.py`-style virtual flycam over the satellite mosaic):
 1. the world drains to B&W (`desat`, `dim`) while the plot keeps its colour and a light runs the boundary (`draw_at`, `draw`);
 2. the plot **lifts out of the ground as a slab** (`lift_at`, `lift` px ≈ 110, `walls` soil / glass / gold, soft shadow) and a `GlassPin` stands on it (`label {name, kicker, meta, photo, icon}`);
-3. its outline **peels off and flies up into a "Thông tin khu đất" sheet** (`sheet_at`, `sheet {title, value, unit, rows [[k, v]], shape (top-down, any units), edges ["71 m", ""…], facing}`): the same shape with edge lengths, the area number, 3–4 rows.
+3. its outline **peels off and lands as a 3D site model (sa bàn)** (`sheet_at`, `sheet {title, value, unit, rows [[k, v]] ≤4, shape (top-down, any units), edges ["71 m", ""…], texture (top-down satellite crop of the shape's bbox), yaw, spin, tilt, size, style}`): the slab extrudes with the real photo on top and turns slowly on a gold plinth ring, architectural dimension lines on the ground, compass, the big number above, the rows as glass chips below. `style: "card"` keeps the old flat ivory sheet (Hiếu found it cheap / AI-looking — use the model).
 
 | prop | note |
 |---|---|
@@ -476,6 +476,10 @@ The trend plot edits (glow outline, B&W outside, "ground lifting", call-outs) ea
 | `track {corners}` | 4 ground points around the plot (≈ 2× the plot); render.py fills `frames` with `footage.track_plane` |
 | `src` | leave empty: render.py cuts this overlay's footage from the timeline and the comp redraws it (that is how B&W-outside and the lifted slab show the real ground) |
 | `ground {text, sub}` | optional name painted flat on the plot before the lift |
+
+`RunTitle` (`name`, `kicker`, `y` 0.8, `size` 96–110, `align`): "chữ chạy" for amenities / places over footage instead of a pin label: the name rises letter by letter out of a mask with a light sweep, gold kicker, no box. Hiếu prefers it to labels on amenity photos.
+
+GeoMap pins: `pin_scale` (0.78) keeps glass cards from covering the map; `pin_focus` (on) shrinks each route card to a small name chip when the next one arrives, so only one big card is ever on screen. `sound_design.keep: ["PlotSpotlight"]` keeps the hero shot's full sound design through `min_gap` / `only`.
 
 Rules: 6–8 s per use, once per video (it is the hero shot); every number on the sheet from the brochure / geo.py (edges measured on the map → add a small "đo trên bản đồ, tham khảo" credit). Skip the lift when the footage is too oblique (< 25° from the horizon) — the walls look fake.
 
