@@ -12,3 +12,6 @@ motion/public/_in/
 assets/sfx/pack/
 assets/sfx/mine/
 .cache/
+
+# user-supplied fonts with their own licences (kept local)
+motion/public/fonts/local/

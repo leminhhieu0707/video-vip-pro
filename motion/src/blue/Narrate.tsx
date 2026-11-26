@@ -201,50 +201,57 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
 };
 
 /**
- * WordStack — word-by-word kinetic captions (the trend talking-head look, made ours): each word pops in on the exact
- * syllable it is spoken, small words stay light and quiet, the key phrase lands huge in the accent colour with a colour
- * sweep running through it and a soft glow; the block sits around the head (put the overlay "behind" to tuck the key
- * word behind the speaker). One overlay = one phrase; the builder makes them from the transcript.
- * Props: words [{w, t (s from overlay start), k (1 = key)}], x 0.5, y 0.5 (bottom of the block), align center | left | right,
- * size 62 (small words), key_size 150, accent, case none | upper (key), ink '#fff', shadow true.
+ * WordStack — word-by-word kinetic captions as a typographic LOCKUP (the look of the top talking-head editors, made ours):
+ * small words in a hairline geometric face (light, big), the key phrase heavy + slanted with a gradient fill, lines kissing
+ * each other and staggered (lead words hang left, tail words hang right), each word flying in on its syllable with motion
+ * blur and a tracking squeeze, leaving with a blur lift. One overlay = one phrase; the builder makes them from the transcript.
+ * Props: words [{w, t (s from overlay start), k (1 = key)}], x 0.5, y 0.5 (vertical centre of the lockup), key_size 170,
+ * grad [c1, c2] (key fill), ink '#fff', max_w 0.88 (of the frame width), tilt -9 (° slant of the key), font 'GEO'.
  */
-export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, align = 'center', size = 70, key_size = 150, accent = '#FFC93C',
-  key_case = 'none', ink = '#FFFFFF', shadow = true, scrim = 0.5}) => {
+export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
+  max_w = 0.88, tilt = -9, font = 'GEO', accent}) => {
   const {frame, fps, t, W, H} = useT();
-  // lines: runs of small words (≤ ~16 chars) and the key run on its own line
-  const lines: {key: boolean; ws: any[]}[] = [];
-  for (const wd of words) {
-    const k = !!wd.k, last = lines[lines.length - 1];
-    if (last && last.key === k && (k || last.ws.map((q) => q.w).join(' ').length + wd.w.length < 17)) last.ws.push(wd);
-    else lines.push({key: k, ws: [wd]});
-  }
-  const out = lerp(t, duration - 0.16, duration, 0, 1);
-  const sh = shadow ? '0 6px 24px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.5)' : 'none';
-  return <AbsoluteFill style={{opacity: 1 - out}}>
-    <div style={{position: 'absolute', left: align === 'left' ? x * W : 0, right: align === 'right' ? (1 - x) * W : (align === 'left' ? undefined : 0),
-      width: align === 'center' ? W : undefined, top: y * H, transform: `translateY(-100%) translateY(${-out * 24}px)`,
-      display: 'flex', flexDirection: 'column', alignItems: align === 'center' ? 'center' : align === 'left' ? 'flex-start' : 'flex-end', gap: 2}}>
-      {scrim ? <div style={{position: 'absolute', left: '50%', top: '50%', width: W * 0.95, height: '170%', transform: 'translate(-50%,-50%)', zIndex: -1,
-        background: `radial-gradient(closest-side, rgba(0,0,0,${scrim}), rgba(0,0,0,${scrim * 0.45}) 55%, rgba(0,0,0,0) 100%)`,
-        opacity: Math.min(1, lerp(t, (words[0]?.t ?? 0) - 0.05, (words[0]?.t ?? 0) + 0.2))}} /> : null}
-      {lines.map((ln, li) => <div key={li} style={{display: 'flex', gap: ln.key ? key_size * 0.22 : size * 0.28, alignItems: 'baseline', whiteSpace: 'nowrap',
-        lineHeight: ln.key ? 0.98 : 1.1}}>
-        {ln.ws.map((wd: any, wi: number) => {
-          const st = wd.t ?? 0;
-          if (ln.key) {
-            const p = spring({frame: frame - st * fps, fps, config: {damping: 9, stiffness: 210, mass: 0.6}});
-            const sw = lerp(t, st + 0.05, st + 0.55, 0, 1);  // colour sweep through the word
-            return <span key={wi} style={{display: 'inline-block', fontFamily: SANS, fontWeight: 800, fontSize: key_size, letterSpacing: '-0.035em',
-              textTransform: key_case === 'upper' ? 'uppercase' : 'none', opacity: Math.min(1, p * 1.6), transform: `scale(${0.35 + 0.65 * p}) translateY(${(1 - p) * 30}px)`,
-              transformOrigin: '50% 80%', backgroundImage: `linear-gradient(100deg, ${accent} ${sw * 120 - 20}%, #FFFFFF ${sw * 120 - 4}%, ${accent} ${sw * 120 + 10}%)`,
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
-              filter: `drop-shadow(0 6px 18px rgba(0,0,0,0.5)) drop-shadow(0 0 ${14 * Math.max(0, 1 - Math.abs(t - st - 0.25) * 2)}px ${accent})`}}>{wd.w}</span>;
-          }
-          const p = spring({frame: frame - st * fps, fps, config: {damping: 14, stiffness: 240, mass: 0.5}});
-          return <span key={wi} style={{display: 'inline-block', fontFamily: SANS, fontWeight: 700, fontSize: size, color: ink, letterSpacing: '-0.01em',
-            textShadow: sh, opacity: Math.min(1, p * 1.5), transform: `translateY(${(1 - p) * 22}px)`, filter: `blur(${(1 - Math.min(1, p)) * 6}px)`}}>{wd.w}</span>;
+  const g = accent ? [accent, accent] : grad;
+  const F = `${font}, BVP, sans-serif`;
+  words = words.map((q: any) => ({...q, w: String(q.w).normalize('NFC')})); // transcripts can be NFD: decomposed marks drop out in many fonts
+  const ki = words.findIndex((q: any) => q.k), has = ki >= 0;
+  const pre = has ? words.slice(0, ki) : words, key = has ? words.filter((q: any) => q.k) : [], post = has ? words.slice(ki + key.length) : [];
+  const ktxt = key.map((q: any) => q.w).join(' ');
+  const K = Math.min(key_size, (W * max_w) / Math.max(1, ktxt.length * 0.6));     // fit the key line to the frame
+  const preS = Math.min(K * 0.6, (W * max_w) / Math.max(1, pre.map((q: any) => q.w).join(' ').length * 0.5));
+  const postS = Math.min(K * 0.42, (W * max_w) / Math.max(1, post.map((q: any) => q.w).join(' ').length * 0.5));
+  const out = lerp(t, duration - 0.18, duration, 0, 1);
+  const shadow = '0 6px 26px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.35)';
+  const enter = (st: number, dir: number, heavy: boolean) => {
+    const p = lerp(t, st - 0.02, st + (heavy ? 0.26 : 0.2), 0, 1, (q) => 1 - Math.pow(1 - q, 3));
+    const b = (1 - p) * (heavy ? 16 : 12) + out * 10;
+    return {p, style: {opacity: Math.min(1, p * 1.8) * (1 - out), filter: `blur(${b.toFixed(2)}px)`,
+      transform: `translate(${(1 - p) * dir * 70}px, ${(1 - p) * (heavy ? 40 : 0) - out * 30}px)`} as React.CSSProperties};
+  };
+  const small = (list: any[], size: number, dir: number) => list.map((wd: any, i: number) => {
+    const e = enter(wd.t ?? 0, dir, false);
+    return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: 300, fontSize: size, lineHeight: 1, color: ink,
+      letterSpacing: `${0.02 + (1 - e.p) * 0.12}em`, textShadow: shadow, marginRight: i < list.length - 1 ? size * 0.22 : 0, ...e.style}}>{wd.w}</span>;
+  });
+  return <AbsoluteFill>
+    <div style={{position: 'absolute', left: x * W, top: y * H, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'stretch'}}>
+      {pre.length ? <div style={{display: 'flex', justifyContent: has ? 'flex-start' : 'center', paddingLeft: has ? K * 0.08 : 0, marginBottom: has ? -K * 0.12 : 0,
+        position: 'relative', zIndex: 1}}>{small(pre, has ? preS : K * 0.62, -1)}</div> : null}
+      {has ? <div style={{display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2}}>
+        {key.map((wd: any, i: number) => {
+          const e = enter(wd.t ?? 0, 0, true);
+          const sw = lerp(t, (wd.t ?? 0) + 0.15, (wd.t ?? 0) + 0.75, -0.3, 1.3);
+          return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: 700, fontSize: K, lineHeight: 0.92,
+            letterSpacing: `${-0.03 + (1 - e.p) * 0.18}em`, padding: `${K * 0.16}px ${K * 0.06}px ${K * 0.22}px`, margin: `${-K * 0.16}px 0 ${-K * 0.22}px`,
+            marginRight: i < key.length - 1 ? K * 0.12 : 0, // padded so the gradient (background-clip) also covers stacked marks above and the dot below (ộ, ệ, ặ)
+            backgroundImage: `linear-gradient(100deg, rgba(255,255,255,0) ${sw * 100 - 14}%, rgba(255,255,255,0.85) ${sw * 100}%, rgba(255,255,255,0) ${sw * 100 + 14}%), linear-gradient(180deg, ${g[0]}, ${g[1]})`,
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
+            ...e.style, transform: `${e.style.transform} skewX(${tilt}deg) scale(${1.18 - 0.18 * e.p})`,
+            filter: `${e.style.filter} drop-shadow(0 8px 22px rgba(0,0,0,0.38))`}}>{wd.w}</span>;
         })}
-      </div>)}
+      </div> : null}
+      {post.length ? <div style={{display: 'flex', justifyContent: 'flex-end', paddingRight: K * 0.06, marginTop: -K * 0.08, position: 'relative', zIndex: 3}}>
+        {small(post, postS, 1)}</div> : null}
     </div>
   </AbsoluteFill>;
 };
