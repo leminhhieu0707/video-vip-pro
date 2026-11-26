@@ -479,6 +479,8 @@ The trend plot edits (glow outline, B&W outside, "ground lifting", call-outs) ea
 
 `RunTitle` (`name`, `kicker`, `y` 0.8, `size` 96–110, `align`): "chữ chạy" for amenities / places over footage instead of a pin label: the name rises letter by letter out of a mask with a light sweep, gold kicker, no box. Hiếu prefers it to labels on amenity photos.
 
+**One type system per video (Hiếu 26/11: mixed styles read as "sao sao"):** Be Vietnam Pro only, numbers = `StatTitle` ivory, kickers = gold caps, panels = dark glass. `LotCard look: "glass"` (+ `kicker`, rows `{k, v, hi}`, `price_note`) for credentials / price tables, `CtaChecklist tone: "ivory"`, `RunTitle` for names. Avoid `KnockoutText` metal fills and serif `luxury` cards in the same video. Keep it bright: `finish: {grade: "bright", glow: 0.06}`, no night ending, no dark basemap; cut every 1–2 s on the music beats (`scripts/beats.py`) and intercut real place photos between map shots.
+
 GeoMap pins: `pin_scale` (0.78) keeps glass cards from covering the map; `pin_focus` (on) shrinks each route card to a small name chip when the next one arrives, so only one big card is ever on screen. `sound_design.keep: ["PlotSpotlight"]` keeps the hero shot's full sound design through `min_gap` / `only`.
 
 Rules: 6–8 s per use, once per video (it is the hero shot); every number on the sheet from the brochure / geo.py (edges measured on the map → add a small "đo trên bản đồ, tham khảo" credit). Skip the lift when the footage is too oblique (< 25° from the horizon) — the walls look fake.

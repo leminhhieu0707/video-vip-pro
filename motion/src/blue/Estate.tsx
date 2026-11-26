@@ -82,7 +82,7 @@ const METAL: Record<string, string> = {copper: COPPER, gold: GOLDG, white: 'line
 const ACCENT: Record<string, string> = {ivory: '#E3C88F', champagne: '#E3C88F', copper: '#E9B48A', gold: '#E8C25E', navy: '#9FB6E8', brand: T('#8EB3FF'), white: '#FFFFFF'};
 const CARD_BG: Record<string, string> = {copper: 'linear-gradient(180deg, #9C6A4A 0%, #7A4B31 100%)', gold: 'linear-gradient(180deg, #A9853C 0%, #7C5F22 100%)',
   navy: 'linear-gradient(180deg, #24344F 0%, #152238 100%)', champagne: 'linear-gradient(180deg, #24344F 0%, #152238 100%)',
-  brand: T('linear-gradient(180deg, #2A3B7A 0%, #152238 100%)')};
+  brand: T('linear-gradient(180deg, #2A3B7A 0%, #152238 100%)'), ivory: 'linear-gradient(160deg, rgba(30,40,62,0.92), rgba(10,15,26,0.94))'};
 // marker colours per tone (pin teardrop + icon bubbles)
 const MARK: Record<string, [string, string, string]> = {copper: ['#B07A55', '#6E4128', 'rgba(255,235,210,0.6)'], gold: ['#C9A24E', '#7C5F22', 'rgba(255,240,200,0.6)'],
   navy: ['#33486E', '#152238', 'rgba(220,230,255,0.5)'], champagne: ['#D9BF86', '#8F7038', 'rgba(255,248,230,0.7)'], brand: [T('#3E5BD0'), T('#152238'), 'rgba(220,230,255,0.5)']};
@@ -793,13 +793,35 @@ export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], doors = [], wind
  * LotCard: the plot's data sheet sliding in over the map. props: title ("LÔ 07"), rows [{k: "Diện tích", v: "100 m²"}, …]
  * (each row ticks in, every `step` s), price, price_note, facing ("Tây Bắc": a compass needle points there), y (0.6), at.
  */
-export const LotCard: React.FC<P> = ({duration, title = 'LÔ 01', rows = [], price, price_note, facing, y = 0.6, at = 0, step = 0.22, color = GOLD, look = 'luxury'}) => {
+export const LotCard: React.FC<P> = ({duration, title = 'LÔ 01', kicker, rows = [], price, price_note, facing, y = 0.6, at = 0, step = 0.22, color = GOLD, look = 'luxury', tone = 'ivory'}) => {
   const {frame, fps, t, W, H} = useT();
   const s = spring({frame: frame - at * fps, fps, config: {damping: 15, stiffness: 140, mass: 0.7}});
   const o = exit(frame, fps, duration, 0.3);
   const DEG: Record<string, number> = {'Bắc': 0, 'Đông Bắc': 45, 'Đông': 90, 'Đông Nam': 135, 'Nam': 180, 'Tây Nam': 225, 'Tây': 270, 'Tây Bắc': 315};
   const needle = facing && DEG[facing] != null ? DEG[facing] : null;
   const np = lerp(t, at + 0.4, at + 1.2, 0, 1, (x) => smooth(x));
+  if (look === 'glass') { // same language as the site-model chips: gold kicker, sans title, one glass pill per row
+    const acc = ACCENT[tone] || ACCENT.ivory;
+    return <AbsoluteFill style={{opacity: o}}>
+      <div style={{position: 'absolute', left: W * 0.06, right: W * 0.06, top: H * y, fontFamily: SANS, color: '#fff'}}>
+        {kicker ? <div style={{fontWeight: 700, fontSize: 28, letterSpacing: '0.2em', textTransform: 'uppercase', color: acc, opacity: s, textShadow: '0 2px 10px rgba(0,0,0,0.6)'}}>{kicker}</div> : null}
+        <div style={{fontWeight: 800, fontSize: 64, lineHeight: 1.08, letterSpacing: '-0.015em', marginBottom: 18, opacity: s, transform: `translateY(${(1 - s) * 24}px)`,
+          textShadow: '0 4px 18px rgba(0,0,0,0.55)'}}>{title}</div>
+        <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+          {rows.map((r: any, i: number) => {
+            const p = lerp(t, at + 0.3 + i * step, at + 0.62 + i * step, 0, 1, (x) => 1 - Math.pow(1 - x, 3));
+            return <div key={i} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, padding: '20px 28px', borderRadius: 22,
+              background: 'linear-gradient(160deg, rgba(30,40,62,0.74), rgba(10,15,26,0.84))', border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 14px 30px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.1)', opacity: p, transform: `translateY(${(1 - p) * 26}px)`}}>
+              <span style={{fontWeight: 600, fontSize: 33, color: 'rgba(255,255,255,0.82)'}}>{r.k}</span>
+              <span style={{fontWeight: 800, fontSize: 40, color: r.hi ? acc : '#fff', whiteSpace: 'nowrap'}}>{r.v}</span></div>;
+          })}
+        </div>
+        {price_note ? <div style={{marginTop: 14, fontWeight: 600, fontSize: 24, color: 'rgba(255,255,255,0.72)', textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+          opacity: lerp(t, at + 0.5 + rows.length * step, at + 0.9 + rows.length * step)}}>{price_note}</div> : null}
+      </div>
+    </AbsoluteFill>;
+  }
   return <AbsoluteFill style={{opacity: o}}>
     {look === 'luxury' ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 0, top: H * (y - 0.12),
       background: 'linear-gradient(180deg, rgba(4,8,14,0) 0%, rgba(4,8,14,0.72) 28%, rgba(4,8,14,0.9) 100%)', opacity: Math.min(1, s * 1.4)}} /> : null}
@@ -1201,8 +1223,8 @@ export const CtaChecklist: React.FC<P> = ({duration, title = 'BÌNH LUẬN / NH�
           const p = spring({frame: frame - (at + 0.4 + i * step) * fps, fps, config: {damping: 13, stiffness: 150, mass: 0.6}});
           return <div key={i} style={{display: 'flex', alignItems: 'center', gap: 20, opacity: Math.min(1, p * 1.5), transform: `translateX(${(1 - p) * -40}px)`}}>
             <div style={{width: 58, height: 58, borderRadius: 99, background: CARD_BG[tone] || CARD_BG.copper, display: 'grid', placeItems: 'center', boxShadow: '0 6px 14px rgba(0,0,0,0.4)',
-              border: tone === 'champagne' ? '1.5px solid #D2B072' : 'none'}}>
-              <Icon24 name={it.icon || 'check'} size={30} /></div>
+              border: tone === 'champagne' || tone === 'ivory' ? `1.5px solid ${ACCENT[tone]}` : 'none'}}>
+              <Icon24 name={it.icon || 'check'} size={30} color={tone === 'ivory' ? ACCENT.ivory : '#fff'} /></div>
             <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 40, color: '#fff', textTransform: 'uppercase', textShadow: '0 3px 10px rgba(0,0,0,0.6)', whiteSpace: 'nowrap'}}>{it.t || it}</div>
           </div>;
         })}
