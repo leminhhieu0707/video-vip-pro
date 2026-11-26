@@ -279,9 +279,11 @@ export const Building3D: React.FC<P> = ({duration, buildings = [], style = 'glas
 
 /**
  * FloorPlan2D: rooms [{name, pts: [[x,y],…] m, color}], wall_h 2.8, extrude_at (s, when it tilts into 3D; null = stays 2D),
- * yaw (deg, 3D view), title, sub, dims (true: overall width / depth dimension lines), dark (false).
+ * yaw (deg, 3D view), title, sub, dims (true: overall width / depth dimension lines), dark (false),
+ * doors / windows [{pts: [[x1,y1],[x2,y2]]}] (m, lying on a wall; a door swings from pts[0]). scripts/floorplan.py makes all of
+ * this from a photo of the drawing.
  */
-export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], wall_h = 2.8, extrude_at = 3.2, yaw = -30, title, sub, dims = true, dark = false}) => {
+export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], doors = [], windows = [], wall_h = 2.8, extrude_at = 3.2, yaw = -30, title, sub, dims = true, dark = false}) => {
   const {frame, fps, t, W, H} = useT();
   const R = (rooms.length ? rooms : [{name: 'Phòng khách', pts: [[0, 0], [5, 0], [5, 6], [0, 6]]}, {name: 'Bếp', pts: [[0, 6], [5, 6], [5, 9], [0, 9]]},
     {name: 'Ngủ', pts: [[0, 9], [5, 9], [5, 13], [0, 13]]}]).map((r: any) => ({...r, pts: ccw(r.pts)}));
@@ -291,7 +293,8 @@ export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], wall_h = 2.8, ex
   const ext = Math.max(maxx - minx, maxy - miny);
   const e3 = extrude_at == null ? 0 : lerp(t, extrude_at, extrude_at + 1.6, 0, 1, (x) => smooth(x));
   const pitchDeg = 90 - 52 * e3, yawDeg = yaw * e3;
-  const view: View = {yaw: (yawDeg * Math.PI) / 180, pitch: (pitchDeg * Math.PI) / 180, dist: ext * 1.3, tx: (minx + maxx) / 2, ty: (miny + maxy) / 2, tz: 0,
+  const fit = Math.min((W * 0.78) / Math.max(1, maxx - minx), (H * 0.6) / Math.max(1, maxy - miny)); // px per metre in the 2D view
+  const view: View = {yaw: (yawDeg * Math.PI) / 180, pitch: (pitchDeg * Math.PI) / 180, dist: ((W * 1.05) / fit) * (1 + 0.55 * e3), tx: (minx + maxx) / 2, ty: (miny + maxy) / 2, tz: 0,
     f: W * 1.05, cx: W / 2, cy: H * (0.47 + 0.03 * e3)};
   const P2 = (p: V3) => project(p, view);
   const o = Math.min(interpolate(t, [0, 0.2], [0, 1], CL), exit(frame, fps, duration, 0.25));
@@ -316,13 +319,71 @@ export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], wall_h = 2.8, ex
     return <polygon key={`fl${i}`} points={q.map((x) => `${x[0]},${x[1]}`).join(' ')} fill={r.color || pal[i % pal.length]} fillOpacity={fp} />;
   });
   const cd = camDir(view);
-  const walls = segs.map(([a, b], i) => {
-    const q = [P2([a[0], a[1], 0]), P2([b[0], b[1], 0]), P2([b[0], b[1], h]), P2([a[0], a[1], h])];
+  // openings cut the walls they sit on: doors leave a gap (+ swing arc, lintel in 3D), windows keep a sill + header
+  const opens: Array<{pts: number[][]; kind: 'door' | 'window'}> = [
+    ...doors.map((d: any) => ({pts: d.pts || d, kind: 'door' as const})), ...windows.map((w: any) => ({pts: w.pts || w, kind: 'window' as const}))];
+  type Piece = {a: number[]; b: number[]; kind: 'wall' | 'door' | 'window'};
+  const pieces: Piece[] = [];
+  segs.forEach(([a, b]) => {
+    const ex = b[0] - a[0], ey = b[1] - a[1], len = Math.hypot(ex, ey) || 1;
+    const ux = ex / len, uy = ey / len;
+    const cuts: Array<[number, number, 'door' | 'window']> = [];
+    opens.forEach((o) => {
+      const [p, q] = o.pts;
+      const off = (pt: number[]) => Math.abs((pt[0] - a[0]) * uy - (pt[1] - a[1]) * ux);
+      if (off(p) > 0.2 || off(q) > 0.2) return;
+      let t1 = (p[0] - a[0]) * ux + (p[1] - a[1]) * uy, t2 = (q[0] - a[0]) * ux + (q[1] - a[1]) * uy;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      t1 = Math.max(0, t1);
+      t2 = Math.min(len, t2);
+      if (t2 - t1 > 0.2) cuts.push([t1, t2, o.kind]);
+    });
+    cuts.sort((x, y) => x[0] - y[0]);
+    let cur = 0;
+    const at = (s: number) => [a[0] + ux * s, a[1] + uy * s];
+    cuts.forEach(([t1, t2, kind]) => {
+      if (t1 > cur + 0.01) pieces.push({a: at(cur), b: at(t1), kind: 'wall'});
+      pieces.push({a: at(Math.max(cur, t1)), b: at(t2), kind});
+      cur = Math.max(cur, t2);
+    });
+    if (len > cur + 0.01) pieces.push({a: at(cur), b: at(len), kind: 'wall'});
+  });
+  const opP = lerp(t, 1.3, 1.8);
+  const quad = (a: number[], b: number[], z0: number, z1: number) => [P2([a[0], a[1], z0]), P2([b[0], b[1], z0]), P2([b[0], b[1], z1]), P2([a[0], a[1], z1])];
+  const pts = (q: number[][]) => q.map((x) => `${x[0]},${x[1]}`).join(' ');
+  const walls = pieces.map(({a, b, kind}, i) => {
+    const q = quad(a, b, 0, h);
     const dd = (q[0][2] + q[1][2]) / 2;
     const ex = b[0] - a[0], ey = b[1] - a[1], len = Math.hypot(ex, ey) || 1;
     const lit = 0.8 + 0.2 * Math.abs((ey / len) * cd[0] - (ex / len) * cd[1]);
+    const wallFill = shade(dark ? '#3A4766' : '#E9EDF4', lit);
+    if (kind === 'door') {
+      const nx = -ey / len, ny = ex / len; // swing towards the left normal, quarter circle from b around a
+      const arc: number[][] = [];
+      for (let s = 0; s <= 12; s++) {
+        const th = (s / 12) * (Math.PI / 2);
+        arc.push(P2([a[0] + (ex * Math.cos(th) + nx * len * Math.sin(th)), a[1] + (ey * Math.cos(th) + ny * len * Math.sin(th)), 0.02]));
+      }
+      const leaf = P2([a[0] + nx * len, a[1] + ny * len, 0.02]), hinge = P2([a[0], a[1], 0.02]);
+      return {d: dd, el: <g key={`dr${i}`} opacity={opP}>
+        <polyline points={pts(arc)} fill="none" stroke={ink} strokeWidth={2} strokeDasharray="6 5" strokeOpacity={0.7} />
+        <line x1={hinge[0]} y1={hinge[1]} x2={leaf[0]} y2={leaf[1]} stroke={ink} strokeWidth={3} />
+        {h > 2.15 ? <polygon points={pts(quad(a, b, 2.1, h))} fill={wallFill} fillOpacity={0.42} stroke={ink} strokeWidth={1.2} strokeOpacity={0.5} /> : null}
+      </g>};
+    }
+    if (kind === 'window') {
+      const nx = (-ey / len) * 0.07, ny = (ex / len) * 0.07;
+      const l1 = [P2([a[0] + nx, a[1] + ny, Math.min(h, 0.9)]), P2([b[0] + nx, b[1] + ny, Math.min(h, 0.9)])];
+      const l2 = [P2([a[0] - nx, a[1] - ny, Math.min(h, 0.9)]), P2([b[0] - nx, b[1] - ny, Math.min(h, 0.9)])];
+      return {d: dd, el: <g key={`wd${i}`} opacity={opP}>
+        {h > 0.05 ? <polygon points={pts(quad(a, b, 0, Math.min(h, 0.9)))} fill={wallFill} fillOpacity={0.42} stroke={ink} strokeWidth={1.2} strokeOpacity={0.5} /> : null}
+        {h > 0.95 ? <polygon points={pts(quad(a, b, 0.9, Math.min(h, 2.1)))} fill="#9CCBFF" fillOpacity={0.35} stroke="#3C8DFF" strokeWidth={1.5} /> : null}
+        {h > 2.15 ? <polygon points={pts(quad(a, b, 2.1, h))} fill={wallFill} fillOpacity={0.42} stroke={ink} strokeWidth={1.2} strokeOpacity={0.5} /> : null}
+        {[l1, l2].map((l, k) => <line key={k} x1={l[0][0]} y1={l[0][1]} x2={l[1][0]} y2={l[1][1]} stroke="#3C8DFF" strokeWidth={3} />)}
+      </g>};
+    }
     return {d: dd, el: <g key={`wl${i}`}>
-      {h > 0.05 ? <polygon points={q.map((x) => `${x[0]},${x[1]}`).join(' ')} fill={shade(dark ? '#3A4766' : '#E9EDF4', lit)} fillOpacity={0.42} stroke={ink} strokeWidth={1.2} strokeOpacity={0.5} /> : null}
+      {h > 0.05 ? <polygon points={pts(q)} fill={wallFill} fillOpacity={0.42} stroke={ink} strokeWidth={1.2} strokeOpacity={0.5} /> : null}
       <line x1={q[3][0]} y1={q[3][1]} x2={q[2][0]} y2={q[2][1]} stroke={ink} strokeWidth={h > 0.05 ? 5 : 9} strokeLinecap="square"
         strokeDasharray={`${Math.hypot(q[2][0] - q[3][0], q[2][1] - q[3][1]) * wallP} 9999`} />
     </g>};
@@ -331,10 +392,12 @@ export const FloorPlan2D: React.FC<P> = ({duration, rooms = [], wall_h = 2.8, ex
     const c = centroid(r.pts);
     const p = P2([c[0], c[1], h * 0.02]);
     const lp = spring({frame: frame - (1.4 + i * 0.18) * fps, fps, config: {damping: 13, stiffness: 160, mass: 0.6}});
+    const rw = Math.max(...r.pts.map((q: number[]) => q[0])) - Math.min(...r.pts.map((q: number[]) => q[0]));
+    const fs = Math.max(16, Math.min(34, (rw * fit * 0.9) / Math.max(4, String(r.name).length * 0.58))); // narrow rooms get smaller text
     return <div key={`lb${i}`} style={{position: 'absolute', left: p[0], top: p[1], transform: `translate(-50%,-50%) scale(${0.6 + 0.4 * lp})`, opacity: Math.min(1, lp * 1.5),
       textAlign: 'center', fontFamily: SANS, color: ink, whiteSpace: 'nowrap', textShadow: dark ? '0 2px 8px #000' : '0 1px 6px rgba(255,255,255,0.9)'}}>
-      <div style={{fontWeight: 800, fontSize: 30}}>{r.name}</div>
-      <div style={{fontWeight: 600, fontSize: 24, opacity: 0.75}}>{fmt(polyArea(r.pts))} m²</div>
+      <div style={{fontWeight: 800, fontSize: fs}}>{r.name}</div>
+      <div style={{fontWeight: 600, fontSize: fs * 0.8, opacity: 0.75}}>{fmt(polyArea(r.pts))} m²</div>
     </div>;
   });
   const dimOp = dims ? lerp(t, 1.0, 1.5) * (1 - e3) : 0;
