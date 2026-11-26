@@ -501,6 +501,8 @@ Learnt from the top talking-head editors (11/2026): every 6–10 s the picture c
 | `compare` | `a {label, value, photo \| icon}`, `b {…}` (values count up) | before / after, tự làm vs có dịch vụ, giá cũ vs giá mới |
 | `card` | `kicker` ("BƯỚC 01"), `text` | one key step or promise |
 
+`WordStack` (word-by-word kinetic captions, the trend talking-head look made ours): one overlay per phrase, `words [{w, t, k}]` from the transcript (t = seconds from the overlay start, k = 1 on the key phrase), small words 70 px bold white, the key phrase 150 px in the accent colour with a colour sweep + glow, soft dark `scrim` behind so it reads on busy walls, `y` = bottom of the block just above the head (measure the head top, it is higher than FACE). Merge key phrases into one token before chunking (never split "tự | động"); chunk at punctuation / pauses > 0.3 s / 6 tokens; add `"behind": true` only when the words talk about being behind (key size ~200 so it still reads); punch-zoom (1.13) on 3–5 key words. Replaces BlueText captions for that video. Example builder: `Kenh AI Moi Ngay/edited/build_demo_wordpop.py`.
+
 Rules: 3–5 s each, at most one per 8 s, never two of the same mode in a row; drop the caption while it is on screen (the title is the caption); alternate `bg` (paper → dark → brand) through the video. Icons (shared with ESTATE): pin, home, cart, star, bridge, wave, plane, school, hospital, tree, train, flag, tag, plan, calendar, chat, key, pool, check, search, chart, money, users, bolt, shield, heart, car, clock, sun, doc, phone.
 
 ## Files

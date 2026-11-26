@@ -294,6 +294,9 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
         if props.get("back", True):
             out.append((f("whoosh", "dwhoosh"), max(0.0, dur - 0.5), 0.1))
         return out
+    if comp == "WordStack":  # one soft pop when the key word lands, nothing on the small words
+        ks = [w for w in (props.get("words") or []) if isinstance(w, dict) and w.get("k")]
+        return [(f("pop", "popup"), float(ks[0].get("t", 0)), 0.1)] if ks else []
     if comp == "RunTitle":  # a soft swipe as the letters rise
         return [(f("swipe", "data"), float(props.get("at", 0.05)) + 0.15, 0.09)]
     if comp == "TagLabel":

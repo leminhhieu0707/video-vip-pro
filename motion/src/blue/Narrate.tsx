@@ -200,4 +200,53 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
   </AbsoluteFill>;
 };
 
-export const NARRATE_COMPS: Record<string, React.FC<any>> = {ExplainCanvas};
+/**
+ * WordStack — word-by-word kinetic captions (the trend talking-head look, made ours): each word pops in on the exact
+ * syllable it is spoken, small words stay light and quiet, the key phrase lands huge in the accent colour with a colour
+ * sweep running through it and a soft glow; the block sits around the head (put the overlay "behind" to tuck the key
+ * word behind the speaker). One overlay = one phrase; the builder makes them from the transcript.
+ * Props: words [{w, t (s from overlay start), k (1 = key)}], x 0.5, y 0.5 (bottom of the block), align center | left | right,
+ * size 62 (small words), key_size 150, accent, case none | upper (key), ink '#fff', shadow true.
+ */
+export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, align = 'center', size = 70, key_size = 150, accent = '#FFC93C',
+  key_case = 'none', ink = '#FFFFFF', shadow = true, scrim = 0.5}) => {
+  const {frame, fps, t, W, H} = useT();
+  // lines: runs of small words (≤ ~16 chars) and the key run on its own line
+  const lines: {key: boolean; ws: any[]}[] = [];
+  for (const wd of words) {
+    const k = !!wd.k, last = lines[lines.length - 1];
+    if (last && last.key === k && (k || last.ws.map((q) => q.w).join(' ').length + wd.w.length < 17)) last.ws.push(wd);
+    else lines.push({key: k, ws: [wd]});
+  }
+  const out = lerp(t, duration - 0.16, duration, 0, 1);
+  const sh = shadow ? '0 6px 24px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.5)' : 'none';
+  return <AbsoluteFill style={{opacity: 1 - out}}>
+    <div style={{position: 'absolute', left: align === 'left' ? x * W : 0, right: align === 'right' ? (1 - x) * W : (align === 'left' ? undefined : 0),
+      width: align === 'center' ? W : undefined, top: y * H, transform: `translateY(-100%) translateY(${-out * 24}px)`,
+      display: 'flex', flexDirection: 'column', alignItems: align === 'center' ? 'center' : align === 'left' ? 'flex-start' : 'flex-end', gap: 2}}>
+      {scrim ? <div style={{position: 'absolute', left: '50%', top: '50%', width: W * 0.95, height: '170%', transform: 'translate(-50%,-50%)', zIndex: -1,
+        background: `radial-gradient(closest-side, rgba(0,0,0,${scrim}), rgba(0,0,0,${scrim * 0.45}) 55%, rgba(0,0,0,0) 100%)`,
+        opacity: Math.min(1, lerp(t, (words[0]?.t ?? 0) - 0.05, (words[0]?.t ?? 0) + 0.2))}} /> : null}
+      {lines.map((ln, li) => <div key={li} style={{display: 'flex', gap: ln.key ? key_size * 0.22 : size * 0.28, alignItems: 'baseline', whiteSpace: 'nowrap',
+        lineHeight: ln.key ? 0.98 : 1.1}}>
+        {ln.ws.map((wd: any, wi: number) => {
+          const st = wd.t ?? 0;
+          if (ln.key) {
+            const p = spring({frame: frame - st * fps, fps, config: {damping: 9, stiffness: 210, mass: 0.6}});
+            const sw = lerp(t, st + 0.05, st + 0.55, 0, 1);  // colour sweep through the word
+            return <span key={wi} style={{display: 'inline-block', fontFamily: SANS, fontWeight: 800, fontSize: key_size, letterSpacing: '-0.035em',
+              textTransform: key_case === 'upper' ? 'uppercase' : 'none', opacity: Math.min(1, p * 1.6), transform: `scale(${0.35 + 0.65 * p}) translateY(${(1 - p) * 30}px)`,
+              transformOrigin: '50% 80%', backgroundImage: `linear-gradient(100deg, ${accent} ${sw * 120 - 20}%, #FFFFFF ${sw * 120 - 4}%, ${accent} ${sw * 120 + 10}%)`,
+              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent',
+              filter: `drop-shadow(0 6px 18px rgba(0,0,0,0.5)) drop-shadow(0 0 ${14 * Math.max(0, 1 - Math.abs(t - st - 0.25) * 2)}px ${accent})`}}>{wd.w}</span>;
+          }
+          const p = spring({frame: frame - st * fps, fps, config: {damping: 14, stiffness: 240, mass: 0.5}});
+          return <span key={wi} style={{display: 'inline-block', fontFamily: SANS, fontWeight: 700, fontSize: size, color: ink, letterSpacing: '-0.01em',
+            textShadow: sh, opacity: Math.min(1, p * 1.5), transform: `translateY(${(1 - p) * 22}px)`, filter: `blur(${(1 - Math.min(1, p)) * 6}px)`}}>{wd.w}</span>;
+        })}
+      </div>)}
+    </div>
+  </AbsoluteFill>;
+};
+
+export const NARRATE_COMPS: Record<string, React.FC<any>> = {ExplainCanvas, WordStack};
