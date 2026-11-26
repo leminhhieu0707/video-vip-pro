@@ -171,7 +171,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true,
   lots = [], lots_at, legend = true, site_edges = false, lift_at, lift_m = 4, roads = [], roads_at,
   look = 'luxury', handheld = 0, volna = false, focus_at, houses = [], follow, vector, basemap = 'satellite', vector_at = 0, streets_at,
-  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2', basemap_opacity = 0.7, tone = 'ivory', pin_style = 'glass', pin_scale = 0.78, pin_focus = true}) => {
+  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2', basemap_opacity = 0.7, tone = 'ivory', pin_style = 'glass', pin_scale = 0.78, pin_focus = true, clean = false, clean_dim = 0.6, site_label_until, pins_until, osm3d_min = 0}) => {
   const {frame, fps, t, W, H} = useT();
   const cam = camAt(camera.length ? camera : [{t: 0, u: site.u ?? 0.5, v: site.v ?? 0.5, z: 14}], t);
   if (follow && t >= follow.from) { // camera rides along a route (bay dọc đường vào lô), road ahead pointing up the screen
@@ -235,7 +235,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
         const op = i === 0 ? 1 : interpolate(cam.z, [L.z - 1.4, L.z - 0.8], [0, 1], CL);
         if (op <= 0) return null;
         return <Img key={i} src={url(L.src)} style={{position: 'absolute', left: X(L.u0), top: Y(L.v0), width: L.du * k, height: L.dv * k, opacity: op,
-          imageRendering: 'auto'}} />;
+          imageRendering: 'auto', filter: clean ? `saturate(0.45) brightness(${clean_dim}) contrast(1.06)` : undefined}} />;
       })}
       {basemap !== 'satellite' ? <div style={{position: 'absolute', inset: 0, background: basemap === 'light' ? '#EEF1F4' : '#08111F',
         opacity: lerp(t, vector_at, vector_at + 0.8) * (basemap === 'blend' ? basemap_opacity : 1)}} /> : null}
@@ -247,12 +247,12 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
           <defs>{(vector.roads || []).filter((r: any) => r.name && r.major).slice(0, 40).map((r: any, i: number) =>
             <path key={i} id={`st${i}`} d={'M' + (X(r.pts[0][0]) > X(r.pts[r.pts.length - 1][0]) ? [...r.pts].reverse() : r.pts)
               .map((q: number[]) => `${X(q[0]).toFixed(1)} ${Y(q[1]).toFixed(1)}`).join(' L')} />)}</defs>
-          {(vector.water || []).map((w: any, i: number) => <polygon key={`wa${i}`} points={pts(w)} fill={dark ? '#0E2C4A' : '#BFD9F2'} />)}
-          {(vector.parks || []).map((w: any, i: number) => <polygon key={`pk${i}`} points={pts(w)} fill={dark ? '#0F2A22' : '#D5ECD9'} />)}
-          {basemap !== 'satellite' ? (vector.buildings || []).map((b: any, i: number) => <polygon key={`bd${i}`} points={pts(b.pts)} fill={dark ? '#1A2740' : '#D9DEE5'} />) : null}
-          {(vector.roads || []).map((r: any, i: number) => <polyline key={`rd${i}`} points={pts(r.pts)} fill="none" strokeLinecap="round" strokeLinejoin="round"
-            stroke={r.major ? (dark ? '#F2C66B' : '#FFFFFF') : (dark ? '#3B4E6E' : '#FFFFFF')} strokeOpacity={r.major ? 0.85 : 0.7}
-            strokeWidth={(r.major ? 7 : 3.5) * Math.max(0.6, Math.min(2.2, Math.pow(2, cam.z - 16)))} />)}
+          {!clean ? (vector.water || []).map((w: any, i: number) => <polygon key={`wa${i}`} points={pts(w)} fill={dark ? '#0E2C4A' : '#BFD9F2'} />) : null}
+          {!clean ? (vector.parks || []).map((w: any, i: number) => <polygon key={`pk${i}`} points={pts(w)} fill={dark ? '#0F2A22' : '#D5ECD9'} />) : null}
+          {basemap !== 'satellite' && !clean ? (vector.buildings || []).map((b: any, i: number) => <polygon key={`bd${i}`} points={pts(b.pts)} fill={dark ? '#1A2740' : '#D9DEE5'} />) : null}
+          {(vector.roads || []).filter((r: any) => !clean || r.major).map((r: any, i: number) => <polyline key={`rd${i}`} points={pts(r.pts)} fill="none" strokeLinecap="round" strokeLinejoin="round"
+            stroke={clean ? '#FFF6E2' : r.major ? (dark ? '#F2C66B' : '#FFFFFF') : (dark ? '#3B4E6E' : '#FFFFFF')} strokeOpacity={clean ? 0.32 : r.major ? 0.85 : 0.7}
+            strokeWidth={(clean ? 3 : r.major ? 7 : 3.5) * Math.max(0.6, Math.min(2.2, Math.pow(2, cam.z - 16)))} />)}
           {streets_at != null ? (vector.roads || []).filter((r: any) => r.name && r.major).slice(0, 40).map((r: any, i: number) => {
             const sp2 = lerp(t, streets_at + i * 0.05, streets_at + i * 0.05 + 0.6);
             return sp2 > 0 ? <text key={`sn${i}`} opacity={sp2} fill="#fff" fontFamily="BVP, sans-serif" fontWeight={600} fontSize={26} letterSpacing="5"
@@ -385,7 +385,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
           </svg>
         </>;
       })() : null}
-      {osm3d_at != null && vector && vector.buildings ? vector.buildings.slice(0, 160).map((bd: any, i: number) => { // OSM footprints extruded
+      {osm3d_at != null && vector && vector.buildings ? vector.buildings.filter((b: any) => (b.levels || 0) >= osm3d_min).slice(0, 160).map((bd: any, i: number) => { // OSM footprints extruded
         if (t < osm3d_at + (i % 20) * 0.04) return null;
         const rp = bd.pts.map((q: number[]) => [X(q[0]), Y(q[1])]);
         const pr = smooth(Math.min(1, (t - osm3d_at - (i % 20) * 0.04) / 0.9));
@@ -457,9 +457,10 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
       {routes.map((rr: any, i: number) => {
         const poi = pois.find((x: any) => x.name === rr.name);
         if (!poi) return null;
-        const p0 = spring({frame: frame - (rr.at + (rr.dur || 1.6) - 0.1) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
+        const cat = (r: any) => r.card_at ?? (r.at + (r.dur || 1.6) - 0.1);
+        const p0 = spring({frame: frame - cat(rr) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
         const nx = pin_focus && agency ? routes[i + 1] : null;
-        const q = nx ? lerp(t, nx.at + (nx.dur || 1.6) - 0.35, nx.at + (nx.dur || 1.6) - 0.05) : 0;
+        const q = nx ? lerp(t, cat(nx) - 0.25, cat(nx) + 0.05) : 0;
         const p = p0 * (1 - q);
         if (q > 0.98) return chip(X(poi.u), Y(poi.v), 1, poi.name, `pc${i}`);
         return p > 0.01 ? <React.Fragment key={`prf${i}`}>{q > 0 ? chip(X(poi.u), Y(poi.v), q, poi.name, `pc${i}`) : null}{label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, poi.km ? `${fmt(poi.km)} km · ~${poi.min} phút` : `${fmt(poi.km_air)} km`, false, rr.icon || poi.glyph,
@@ -467,14 +468,18 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
           poi.km ? `~${poi.min} phút · ${fmt(poi.km)} km` : undefined), `pr${i}`, rr.dx || 0, rr.dy || 0)}</React.Fragment> : null;
       })}
       {pins_at != null ? pois.filter((x: any) => !routes.find((r: any) => r.name === x.name)).map((poi: any, i: number) => {
-        const p = spring({frame: frame - (pins_at + i * 0.2) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
+        const p = spring({frame: frame - (pins_at + i * 0.2) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}})
+          * (pins_until != null ? 1 - lerp(t, pins_until, pins_until + 0.35) : 1);
         return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, poi.kicker || `cách ${fmt(poi.km_air)} km`, false, poi.glyph,
           pin_style === 'glass' ? poi.kicker : (poi.kicker || `cách ${fmt(poi.km_air)} km`), poi.photo, poi.meta || `cách ${fmt(poi.km_air)} km`), `pp${i}`, poi.dx || 0, poi.dy || 0) : null;
       }) : null}
       {site_label && site_at != null ? (() => {
         const p = spring({frame: frame - (site_at + site_draw * 0.6) * fps, fps, config: {damping: 12, stiffness: 140, mass: 0.7}});
         const top = ring.length ? Math.min(...ring.map((q) => q[1])) : Y(site.v);
-        return p > 0.01 ? label(X(site.u), top - 10, p, card(site_label, site_sub, true, 'home', pin_style === 'glass' ? 'Dự án' : site_sub, site.photo, site_sub), 'site') : null;
+        const q = site_label_until != null ? lerp(t, site_label_until, site_label_until + 0.35) : 0; // hands the stage to the route cards, keeps a chip
+        if (q > 0.98) return chip(X(site.u), top - 10, 1, site_label, 'sitec');
+        return p > 0.01 ? <React.Fragment key="sitef">{q > 0 ? chip(X(site.u), top - 10, q, site_label, 'sitec') : null}
+          {label(X(site.u), top - 10, p * (1 - q), card(site_label, site_sub, true, 'home', pin_style === 'glass' ? 'Dự án' : site_sub, site.photo, site_sub), 'site')}</React.Fragment> : null;
       })() : null}
     </div>
     {legend && lots_at != null && lots.length ? (() => {

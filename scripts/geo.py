@@ -439,7 +439,9 @@ out geom tags;"""
         g = el.get("geometry") or []
         if len(g) < 2:
             continue
-        pts = simplify([merc(p["lat"], p["lon"]) for p in g], tol)
+        raw = [merc(p["lat"], p["lon"]) for p in g]
+        closed = len(raw) > 3 and raw[0] == raw[-1]  # rings: simplify the open path (equal end points made Douglas-Peucker drop everything)
+        pts = simplify(raw[:-1], tol) + [raw[0]] if closed else simplify(raw, tol)
         pts = [[round(a, 9), round(b, 9)] for a, b in pts]
         tg = el.get("tags", {})
         if "highway" in tg:
