@@ -432,6 +432,7 @@ Rules: distances and times on screen say "khoảng / ~" and the video carries a 
 | `KnockoutText` | `text` (`\n` lines), `sub`, `bg`, `ink`, `size`, `fly_at`, `fly_x` / `fly_y`, `fly_dur` | Solid card with the words cut out, the video showing through the letters, then the camera flies through a letter. |
 | `InvertTitle` | `text`, `size`, `y`, `dir`, `speed`, `sub` | Huge sliding words. Put `"blend": "difference"` on the overlay = chữ âm bản (inverts what is behind). |
 | `LensFlare` | `x0` → `x1`, `y`, `at`, `dur`, `color`, `size` | Anamorphic streak + ghosts. Overlay with `"blend": "screen"`. |
+| `LuxLabel` | `text`, `sub`, `x`, `y`, `align`, `at`, `line`, `size` | Quiet luxury caption over footage (caps + hairline + serif line): room features, project facts. |
 | `TrackedPlot` | `track: {corners}` (plot at the overlay start, frame fractions), `edges`, `area`, `facing`, `labels [{at, text, sub, t}]`, `ground {text, sub, size}`, `drops [{src PNG, at, w, t}]`, `focus`, `draw_at`, `draw` | On a drone / GES shot: render.py tracks the ground (KLT + homography, ~5 px drift over 4 s in tests) and the boundary, dimensions, labels, text lying on the ground and dropped cut-outs stay glued to the land. Choose the corners by looking at the frame at the overlay start, or with `ges.py locate`. |
 
 **Footage overlays (render.py → footage.py)**

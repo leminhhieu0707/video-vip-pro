@@ -261,6 +261,8 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
     if comp == "KnockoutText":
         fa = float(props.get("fly_at") or dur - float(props.get("fly_dur", 1.0)) - 0.1)
         return [(f("hit", "thump"), float(props.get("at", 0)) + 0.05, 0.14), (f("whoosh", "dwhoosh"), fa, 0.18)]
+    if comp == "LuxLabel":
+        return [(f("swipe", "data"), float(props.get("at", 0)) + 0.05, 0.08)]
     if comp == "InvertTitle":
         return [(f("whoosh", "dwhoosh"), 0.0, 0.14)]
     if comp == "LensFlare":

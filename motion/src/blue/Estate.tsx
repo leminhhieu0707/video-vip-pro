@@ -964,4 +964,27 @@ export const TrackedPlot: React.FC<P> = ({duration, frames = [], track = {}, rin
   </AbsoluteFill>;
 };
 
-export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot};
+/**
+ * LuxLabel: a quiet luxury caption over footage: small wide-tracked caps, an optional serif italic line, a hairline that
+ * draws under it, a soft dark glow for readability. props: text, sub, x (0.08), y (0.72), align (left | center | right), at,
+ * line (true), size (26), color.
+ */
+export const LuxLabel: React.FC<P> = ({duration, text = 'NHÃN', sub, x = 0.08, y = 0.72, align = 'left', at = 0, line = true, size = 26, color = GOLD}) => {
+  const {frame, fps, t, W, H} = useT();
+  const p = lerp(t, at, at + 0.45, 0, 1, EASE_IN);
+  const lp = lerp(t, at + 0.15, at + 0.75, 0, 1, (q) => smooth(q));
+  const o = exit(frame, fps, duration, 0.3);
+  const tx = align === 'center' ? '-50%' : align === 'right' ? '-100%' : '0';
+  return <AbsoluteFill style={{opacity: o}}>
+    <div style={{position: 'absolute', left: x * W, top: y * H, transform: `translate(${tx}, 0)`, textAlign: align as any, textShadow: LUX.shadow,
+      opacity: Math.min(1, p * 1.4)}}>
+      <div style={{...LUX.cap, fontSize: size, color: '#fff', whiteSpace: 'nowrap', transform: `translateY(${(1 - p) * 14}px)`,
+        paddingLeft: align === 'center' ? '0.26em' : 0}}>{text}</div>
+      {line ? <div style={{height: 1.5, marginTop: 10, width: `${lp * 100}%`, background: `linear-gradient(90deg, ${color}, rgba(255,255,255,0.4))`,
+        marginLeft: align === 'right' ? 'auto' : align === 'center' ? 'auto' : 0, marginRight: align === 'center' ? 'auto' : 0}} /> : null}
+      {sub ? <div style={{...LUX.num, fontSize: size * 1.5, color, whiteSpace: 'nowrap', marginTop: 6, opacity: lp}}>{sub}</div> : null}
+    </div>
+  </AbsoluteFill>;
+};
+
+export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot, LuxLabel};
