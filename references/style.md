@@ -444,6 +444,25 @@ Rules: distances and times on screen say "khoảng / ~" and the video carries a 
 
 **Google Earth Studio** (`ges.py`): `keys` turns the GeoMap camera into GES keyframes (target, altitude, heading, tilt); Hiếu renders 1080×1920 in GES; `locate` finds the plot on the first frame by matching the satellite mosaic and writes TrackedPlot corners + a check image. Credit "Google Earth" on screen.
 
+## AGENCY look — the Vietnamese real-estate standard (learnt from top project reels, 11/2026)
+
+Real-estate viewers scan for numbers. Every scene carries **one big number** and its meaning; labels are **copper pin cards**, never thin magazine captions. Use this look by default for projects, plots and listings (`look: "agency"` on GeoMap); keep `luxury` for lifestyle / branded-residence moods only when the user asks.
+
+Type scale on a 1080-wide frame (never smaller on a phone video): number 190–230 px · unit 0.38× · caption 44 px bold white caps · pin name 34 px bold caps + 22 px kicker · checklist 40 px · captions/subtitles 56 px+.
+
+| comp | props | use |
+|---|---|---|
+| `StatTitle` | `value` ("7,9", "42+", "1.286", "10–15%"), `unit`, `caption`, `kicker`, `compare` ("≈ 2,5 sân bóng đá", or "auto" for ha), `y` 0.085, `size` 210, `tone` champagne / copper / gold / white, `count`, `at`, `scrim` | The headline number at the top centre, metallic gradient, counts up, caption under it. One per scene: quy mô (ha), mật độ xây dựng (%), cảnh quan (ha), tiện ích (42+), số tháp / tầng, số căn, % căn góc / 2 mặt thoáng, giá từ (triệu/m² or tỷ), thời gian tới tiện ích. |
+| `TagLabel` | `name`, `kicker`, `icon`, `x`, `y` (marker tip), `tone`, `pin` | Copper card + teardrop marker with an icon, pointing at a thing in a photo / footage (phân khu, tiện ích, phòng, thiết bị). |
+| `StepTimeline` | `title`, `steps [{label, value, unit}]`, `x`, `y`, `gap`, `step`, `size` | Payment policy (ký HĐMB %, hỗ trợ lãi suất tháng, chiết khấu %), progress milestones. |
+| `CtaChecklist` | `title`, `sub`, `items [{t, icon}]`, `y`, `step` | "BÌNH LUẬN / NHẮN TIN NGAY · để nhận" + bảng giá gốc / mặt bằng từng mã căn / lịch tham quan nhà mẫu. Then the agent's contact card. |
+| GeoMap `look: "agency"` | pois may carry `glyph` (icon) and `kicker`; routes may carry `icon` | Route / pin / site cards become copper pin cards (kicker = "~3 phút · 1,4 km"). |
+
+**Make it ours, not a copy of the reference reels:** pick the tone from the project's brand (`champagne` + navy cards for Masterise-type luxury, `copper` for warm resort / green projects, `gold`, `brand` = the plan theme); always add something the references lack: a plain-language `compare` under area numbers, real measured travel times on pins, counting numbers, numbers standing behind towers (`"behind": "sky"`). Tones apply to `StatTitle`, `TagLabel`, `CtaChecklist`, `StepTimeline` and GeoMap `tone`.
+
+Icons: pin, home, cart, star, bridge, wave, plane, school, hospital, tree, train, flag, tag, plan, calendar, chat, key, pool, check.
+Story order that works: hook number or location → map + pins (tiện ích, khoảng cách) → quy mô / mật độ / cảnh quan numbers on the project → tiện ích + phân khu tags → căn hộ / tầng → giá từ → chính sách thanh toán → CTA checklist → contact.
+
 ## Files
 - **`motion/`:** the Remotion 4.0.541 project.
   - `src/blue/theme.ts`: tokens and theme mapping.

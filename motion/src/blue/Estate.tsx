@@ -72,6 +72,50 @@ function prism(ring: number[][], z0: number, h: number, wall: string, roof: Reac
     <div style={{position: 'absolute', inset: 0, transform: `translateZ(${z0 + h}px)`, clipPath: `polygon(${ring.map((q) => `${q[0]}px ${q[1]}px`).join(', ')})`}}>{roof}</div>
   </React.Fragment>;
 }
+// AGENCY look (measured on top VN real-estate reels): huge metallic numbers, bold white caps captions, copper pin cards.
+// Type scale on a 1080-wide frame: number 190–230 px, unit 0.38×, caption 44 px, pin name 34 px + kicker 22 px.
+const COPPER = 'linear-gradient(180deg, #FFF1DE 0%, #F6CDA4 30%, #D8996A 62%, #9A5E3C 100%)';
+const GOLDG = 'linear-gradient(180deg, #FFF7D6 0%, #F7DC8A 35%, #D9A441 68%, #94661F 100%)';
+const METAL: Record<string, string> = {copper: COPPER, gold: GOLDG, white: 'linear-gradient(180deg, #FFFFFF 0%, #E6ECF5 100%)',
+  champagne: 'linear-gradient(180deg, #FFFBEF 0%, #F3E2B8 34%, #D2B072 66%, #8F7038 100%)'};
+const CARD_BG: Record<string, string> = {copper: 'linear-gradient(180deg, #9C6A4A 0%, #7A4B31 100%)', gold: 'linear-gradient(180deg, #A9853C 0%, #7C5F22 100%)',
+  navy: 'linear-gradient(180deg, #24344F 0%, #152238 100%)', champagne: 'linear-gradient(180deg, #24344F 0%, #152238 100%)',
+  brand: T('linear-gradient(180deg, #2A3B7A 0%, #152238 100%)')};
+// marker colours per tone (pin teardrop + icon bubbles)
+const MARK: Record<string, [string, string, string]> = {copper: ['#B07A55', '#6E4128', 'rgba(255,235,210,0.6)'], gold: ['#C9A24E', '#7C5F22', 'rgba(255,240,200,0.6)'],
+  navy: ['#33486E', '#152238', 'rgba(220,230,255,0.5)'], champagne: ['#D9BF86', '#8F7038', 'rgba(255,248,230,0.7)'], brand: [T('#3E5BD0'), T('#152238'), 'rgba(220,230,255,0.5)']};
+const metalText = (g: string): React.CSSProperties => ({backgroundImage: g, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+  WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.55)) drop-shadow(0 1px 1px rgba(0,0,0,0.6))'});
+/** tiny line icons for pins / checklists (24×24, white) */
+const ICON: Record<string, string> = {
+  pin: 'M12 3a6 6 0 016 6c0 4.5-6 11-6 11S6 13.5 6 9a6 6 0 016-6zm0 3.5A2.5 2.5 0 1012 11.5 2.5 2.5 0 0012 6.5z',
+  cart: 'M4 5h2l2 10h9l2-7H7M10 19a1 1 0 100 .1M17 19a1 1 0 100 .1', star: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z',
+  bridge: 'M3 16h18M5 16V10m14 6v-6M3 10c4 0 5-4 9-4s5 4 9 4M9 16v-3m6 3v-3', wave: 'M3 14c2 0 2-2 4.5-2S10 14 12 14s2-2 4.5-2S19 14 21 14M3 18c2 0 2-2 4.5-2S10 18 12 18s2-2 4.5-2S19 18 21 18',
+  plane: 'M3 13l8-2 4-7 2 1-2 7 6 2v2l-7-1-3 5H9l1-5-6-1z', school: 'M3 9l9-5 9 5-9 5zm3 2v4c2 2 10 2 12 0v-4', hospital: 'M5 4h14v16H5zM12 8v6M9 11h6',
+  tree: 'M12 3l5 7h-3l4 6H6l4-6H7zM12 16v5', train: 'M7 3h10a2 2 0 012 2v9a3 3 0 01-3 3H8a3 3 0 01-3-3V5a2 2 0 012-2zM5 10h14M8 20l-2 2M16 20l2 2',
+  flag: 'M6 21V4m0 0h11l-2 4 2 4H6', tag: 'M3 12l9-9h8v8l-9 9zM16 8a1 1 0 100 .1', plan: 'M4 4h16v16H4zM4 12h8V4M12 16h8',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', chat: 'M4 5h16v11H9l-5 4z', key: 'M8 14a4 4 0 114-4l8 0v3h-2v2h-3v-2h-3a4 4 0 01-4 1z',
+  pool: 'M3 17c2 0 2-1.5 4.5-1.5S10 17 12 17s2-1.5 4.5-1.5S19 17 21 17M7 14V5a2 2 0 014 0M13 14V5a2 2 0 014 0M7 8h6M7 11h6',
+  home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z', check: 'M5 12l4 4 10-10'};
+const Icon24: React.FC<{name?: string; size?: number; color?: string}> = ({name = 'pin', size = 24, color = '#fff'}) =>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+    <path d={ICON[name] || ICON.pin} /></svg>;
+/** the agency pin: copper card (kicker + NAME) above a teardrop marker with an icon */
+const AgencyPin: React.FC<{name: string; kicker?: string; icon?: string; tone?: string; p?: number}> = ({name, kicker, icon, tone = 'copper', p = 1}) =>
+  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: Math.min(1, p * 1.5), transform: `scale(${0.7 + 0.3 * p})`, transformOrigin: '50% 100%'}}>
+    <div style={{background: CARD_BG[tone] || CARD_BG.copper, borderRadius: 8, padding: kicker ? '10px 26px 12px' : '14px 26px', textAlign: 'center', whiteSpace: 'nowrap',
+      boxShadow: '0 10px 24px rgba(0,0,0,0.45)', border: tone === 'champagne' ? '1.5px solid #D2B072' : '1px solid rgba(255,230,200,0.35)'}}>
+      {kicker ? <div style={{fontFamily: SANS, fontWeight: 500, fontSize: 22, color: 'rgba(255,240,225,0.9)'}}>{kicker}</div> : null}
+      <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', letterSpacing: '0.01em', textTransform: 'uppercase'}}>{name}</div>
+    </div>
+    <svg width={60} height={78} viewBox="0 0 60 78" style={{marginTop: 10, filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.5))'}}>
+      <defs><linearGradient id={`pinG${tone}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={(MARK[tone] || MARK.copper)[0]} />
+        <stop offset="1" stopColor={(MARK[tone] || MARK.copper)[1]} /></linearGradient></defs>
+      <path d="M30 2C14.5 2 3 13.5 3 28c0 19 27 47 27 47s27-28 27-47C57 13.5 45.5 2 30 2z" fill={`url(#pinG${tone})`} stroke={(MARK[tone] || MARK.copper)[2]} strokeWidth={1.5} />
+    </svg>
+    <div style={{marginTop: -70, height: 52, display: 'flex', alignItems: 'center'}}><Icon24 name={icon} size={30} /></div>
+    <div style={{marginTop: 14, width: 26, height: 8, borderRadius: 99, background: 'rgba(0,0,0,0.35)', filter: 'blur(2px)'}} />
+  </div>;
 const LUX = {cap: {fontFamily: SANS, fontWeight: 600, letterSpacing: '0.26em', textTransform: 'uppercase' as const},
   num: {fontFamily: SERIF, fontStyle: 'italic' as const, fontWeight: 500}, shadow: '0 2px 14px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.6)'};
 
@@ -89,7 +133,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true,
   lots = [], lots_at, legend = true, site_edges = false, lift_at, lift_m = 4, roads = [], roads_at,
   look = 'luxury', handheld = 0, volna = false, focus_at, houses = [], follow, vector, basemap = 'satellite', vector_at = 0, streets_at,
-  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2', basemap_opacity = 0.7}) => {
+  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2', basemap_opacity = 0.7, tone = 'copper'}) => {
   const {frame, fps, t, W, H} = useT();
   const cam = camAt(camera.length ? camera : [{t: 0, u: site.u ?? 0.5, v: site.v ?? 0.5, z: 14}], t);
   if (follow && t >= follow.from) { // camera rides along a route (bay dọc đường vào lô), road ahead pointing up the screen
@@ -117,8 +161,11 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   const counter = `rotateZ(${-cam.rot}deg) rotateX(${-cam.tilt}deg)`; // labels stand up
   const label = (x: number, y: number, p: number, node: React.ReactNode, key: string, dx = 0, dy = 0) => <div key={key} style={{position: 'absolute', left: x, top: y,
     transform: `translate(-50%, -100%) ${counter} translate(${dx}px, ${dy + (1 - p) * 30}px) scale(${0.6 + 0.4 * p})`, transformOrigin: '50% 100%', opacity: Math.min(1, p * 1.5)}}>{node}</div>;
-  const lux = look === 'luxury';
-  const card = (a: React.ReactNode, b?: React.ReactNode, big = false) => lux ? <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textShadow: LUX.shadow}}>
+  const lux = look === 'luxury' || look === 'agency';
+  const agency = look === 'agency';
+  const card = (a: React.ReactNode, b?: React.ReactNode, big = false, icon?: string, kicker?: string) => agency
+    ? <AgencyPin name={String(a)} kicker={kicker ?? (b ? String(b) : undefined)} icon={icon || (big ? 'home' : 'pin')} tone={tone} />
+    : lux ? <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textShadow: LUX.shadow}}>
     <div style={{...LUX.cap, fontSize: big ? 30 : 21, color: '#fff', whiteSpace: 'nowrap', paddingLeft: '0.26em'}}>{a}</div>
     {b ? <div style={{...LUX.num, fontSize: big ? 46 : 40, color, whiteSpace: 'nowrap', marginTop: 2}}>{b}</div> : null}
     <div style={{width: 1.5, height: big ? 120 : 90, marginTop: 8, background: 'linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.15))'}} />
@@ -365,16 +412,17 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
         const poi = pois.find((x: any) => x.name === rr.name);
         if (!poi) return null;
         const p = spring({frame: frame - (rr.at + (rr.dur || 1.6) - 0.1) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
-        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, poi.km ? `${fmt(poi.km)} km · ~${poi.min} phút` : `${fmt(poi.km_air)} km`), `pr${i}`, rr.dx || 0, rr.dy || 0) : null;
+        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, poi.km ? `${fmt(poi.km)} km · ~${poi.min} phút` : `${fmt(poi.km_air)} km`, false, rr.icon || poi.glyph,
+          poi.km ? `~${poi.min} phút · ${fmt(poi.km)} km` : undefined), `pr${i}`, rr.dx || 0, rr.dy || 0) : null;
       })}
       {pins_at != null ? pois.filter((x: any) => !routes.find((r: any) => r.name === x.name)).map((poi: any, i: number) => {
         const p = spring({frame: frame - (pins_at + i * 0.2) * fps, fps, config: {damping: 12, stiffness: 160, mass: 0.6}});
-        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, `cách ${fmt(poi.km_air)} km`), `pp${i}`, poi.dx || 0, poi.dy || 0) : null;
+        return p > 0.01 ? label(X(poi.u), Y(poi.v), p, card(lux ? poi.name : `${poi.icon || '📍'} ${poi.name}`, poi.kicker || `cách ${fmt(poi.km_air)} km`, false, poi.glyph, poi.kicker || `cách ${fmt(poi.km_air)} km`), `pp${i}`, poi.dx || 0, poi.dy || 0) : null;
       }) : null}
       {site_label && site_at != null ? (() => {
         const p = spring({frame: frame - (site_at + site_draw * 0.6) * fps, fps, config: {damping: 12, stiffness: 140, mass: 0.7}});
         const top = ring.length ? Math.min(...ring.map((q) => q[1])) : Y(site.v);
-        return p > 0.01 ? label(X(site.u), top - 10, p, card(site_label, site_sub, true), 'site') : null;
+        return p > 0.01 ? label(X(site.u), top - 10, p, card(site_label, site_sub, true, 'home', site_sub), 'site') : null;
       })() : null}
     </div>
     {legend && lots_at != null && lots.length ? (() => {
@@ -987,4 +1035,144 @@ export const LuxLabel: React.FC<P> = ({duration, text = 'NHÃN', sub, x = 0.08, 
   </AbsoluteFill>;
 };
 
-export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot, LuxLabel};
+// ================================================================ AGENCY pack: stat title, step timeline, CTA checklist, tag label
+const parseNum = (str: string) => { // "7,9" → {v: 7.9, dec: 1, sep: ','}, "1.286" → 1286 (Vietnamese thousands dot)
+  const m = String(str).match(/^(\D*)(\d[\d.,]*)(.*)$/);
+  if (!m) return null;
+  const raw = m[2];
+  let v: number, dec = 0;
+  if (/^\d{1,3}(\.\d{3})+$/.test(raw)) v = parseFloat(raw.replace(/\./g, ''));
+  else if (raw.includes(',')) { v = parseFloat(raw.replace(',', '.')); dec = raw.split(',')[1].length; }
+  else v = parseFloat(raw);
+  return {pre: m[1], v, dec, post: m[3], thousands: /^\d{1,3}(\.\d{3})+$/.test(raw)};
+};
+const showNum = (n: ReturnType<typeof parseNum>, k: number) => {
+  if (!n) return '';
+  const x = n.v * k;
+  const body = n.thousands ? Math.round(x).toLocaleString('de-DE') : n.dec ? x.toFixed(n.dec).replace('.', ',') : String(Math.round(x));
+  return n.pre + body + n.post;
+};
+/**
+ * StatTitle: the agency headline number. props: value ("7,9" | "42+" | "1.286" | "10–15%"), unit ("ha", "tháp", "triệu/m²"),
+ * caption ("QUY MÔ DỰ ÁN"), kicker (small line above, e.g. "GIÁ THAM KHẢO TỪ"), y (0.1 = top of the block), size (210),
+ * tone copper | gold | white, count (true: plain numbers count up), at, scrim (true: soft dark band behind for readability).
+ */
+export const StatTitle: React.FC<P> = ({duration, value = '42+', unit, caption, kicker, compare, y = 0.085, size = 210, tone = 'copper', count = true, at = 0, scrim = true, x = 0.5}) => {
+  const {frame, fps, t, W, H} = useT();
+  const pIn = spring({frame: frame - at * fps, fps, config: {damping: 15, stiffness: 120, mass: 0.8}});
+  const o = Math.min(1, pIn * 1.6) * exit(frame, fps, duration, 0.3);
+  const n = count && !/[–-]/.test(String(value).slice(1)) ? parseNum(String(value)) : null;
+  const k = n ? 1 - Math.pow(1 - Math.min(1, Math.max(0, (t - at) / 0.9)), 3) : 1;
+  const g = METAL[tone] || COPPER;
+  const cp = lerp(t, at + 0.35, at + 0.8);
+  return <AbsoluteFill style={{opacity: o}}>
+    {scrim ? <div style={{position: 'absolute', left: 0, right: 0, top: 0, height: H * (y + 0.24),
+      background: 'linear-gradient(180deg, rgba(4,8,14,0.55) 0%, rgba(4,8,14,0.32) 55%, rgba(4,8,14,0) 100%)'}} /> : null}
+    <div style={{position: 'absolute', left: x * W, top: H * y, transform: `translateX(-50%) translateY(${(1 - pIn) * 40}px)`, textAlign: 'center', whiteSpace: 'nowrap'}}>
+      {kicker ? <div style={{fontFamily: SANS, fontWeight: 800, fontSize: size * 0.24, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em',
+        textShadow: '0 3px 12px rgba(0,0,0,0.6)', marginBottom: -size * 0.06}}>{kicker}</div> : null}
+      <div style={{display: 'inline-flex', alignItems: 'baseline', gap: size * 0.06}}>
+        <span style={{fontFamily: SANS, fontWeight: 800, fontSize: size, lineHeight: 1, letterSpacing: '-0.03em', ...metalText(g)}}>{n ? showNum(n, k) : value}</span>
+        {unit ? <span style={{fontFamily: SANS, fontWeight: 800, fontSize: size * 0.38, lineHeight: 1, ...metalText(g)}}>{unit}</span> : null}
+      </div>
+      {caption ? <div style={{fontFamily: SANS, fontWeight: 800, fontSize: Math.max(40, size * 0.21), color: '#fff', textTransform: 'uppercase', letterSpacing: '0.01em',
+        textShadow: '0 3px 12px rgba(0,0,0,0.65)', marginTop: size * 0.02, opacity: cp, transform: `translateY(${(1 - cp) * 14}px)`}}>{caption}</div> : null}
+      {(() => { // plain-language comparison under the number: "≈ 2,5 sân bóng đá" (auto for ha)
+        let c = compare;
+        if (compare === 'auto' && n && /^ha$/i.test(String(unit || ''))) c = `≈ ${(n.v / 0.714).toFixed(1).replace('.', ',')} sân bóng đá`;
+        if (!c || c === 'auto') return null;
+        const q = lerp(t, at + 0.9, at + 1.3);
+        return <div style={{display: 'inline-block', marginTop: 16, padding: '8px 22px', borderRadius: 99, background: 'rgba(8,14,24,0.6)',
+          border: `1.5px solid ${tone === 'champagne' ? '#D2B072' : 'rgba(246,205,164,0.7)'}`, fontFamily: SANS, fontWeight: 700, fontSize: 30, color: '#fff',
+          opacity: q, transform: `translateY(${(1 - q) * 10}px)`}}>{c}</div>;
+      })()}
+    </div>
+  </AbsoluteFill>;
+};
+
+/**
+ * StepTimeline: payment policy / roadmap as a vertical gold line with numbered dots. props: title ("CHÍNH SÁCH THANH TOÁN"),
+ * steps [{label: "KÝ HỢP ĐỒNG MUA BÁN", value: "10–15%", unit}], x (0.12), y (0.22), gap (0.17 of the height), step (0.6 s), tone.
+ */
+export const StepTimeline: React.FC<P> = ({duration, title, steps = [], x = 0.12, y = 0.22, gap = 0.17, step = 0.6, at = 0.2, tone = 'copper', size = 150}) => {
+  const {frame, fps, t, W, H} = useT();
+  const o = exit(frame, fps, duration, 0.3);
+  const g = METAL[tone] || COPPER;
+  const lineP = lerp(t, at, at + step * Math.max(1, steps.length), 0, 1, (q) => smooth(q));
+  return <AbsoluteFill style={{opacity: o}}>
+    <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(4,8,14,0.6) 0%, rgba(4,8,14,0.25) 60%, rgba(4,8,14,0) 100%)', opacity: lerp(t, 0, 0.4)}} />
+    {title ? <div style={{position: 'absolute', left: 0, right: 0, top: H * (y - 0.09), textAlign: 'center', fontFamily: SANS, fontWeight: 800, fontSize: 40,
+      color: '#F6D9BD', textTransform: 'uppercase', textShadow: '0 3px 12px rgba(0,0,0,0.6)', opacity: lerp(t, 0, 0.35)}}>{title}</div> : null}
+    <div style={{position: 'absolute', left: x * W, top: H * y, width: 4, height: H * gap * (steps.length - 0.4) * lineP, borderRadius: 4,
+      background: 'linear-gradient(180deg, #F6CDA4, #9A5E3C)'}} />
+    {steps.map((s: any, i: number) => {
+      const p = spring({frame: frame - (at + i * step) * fps, fps, config: {damping: 14, stiffness: 130, mass: 0.7}});
+      const top = H * (y + i * gap);
+      return <div key={i} style={{position: 'absolute', left: x * W - 22, top: top + 30, display: 'flex', alignItems: 'flex-start', gap: 30, opacity: Math.min(1, p * 1.5),
+        transform: `translateX(${(1 - p) * 40}px)`}}>
+        <div style={{width: 48, height: 48, borderRadius: 99, background: 'radial-gradient(circle, #F6CDA4 0%, #B57B52 100%)', boxShadow: '0 0 0 6px rgba(246,205,164,0.25)',
+          display: 'grid', placeItems: 'center', fontFamily: SANS, fontWeight: 800, fontSize: 24, color: '#4A2A18', flex: 'none', marginTop: size * 0.3}}>{i + 1}</div>
+        <div>
+          <div style={{fontFamily: SANS, fontWeight: 700, fontSize: 30, color: '#F6D9BD', textTransform: 'uppercase', textShadow: '0 2px 8px rgba(0,0,0,0.6)'}}>{s.label}</div>
+          <div style={{display: 'flex', alignItems: 'baseline', gap: 16, marginTop: -size * 0.04}}>
+            <span style={{fontFamily: SANS, fontWeight: 800, fontSize: size, lineHeight: 1.02, letterSpacing: '-0.03em', ...metalText(g)}}>{s.value}</span>
+            {s.unit ? <span style={{fontFamily: SANS, fontWeight: 800, fontSize: size * 0.36, color: '#fff', textShadow: '0 3px 10px rgba(0,0,0,0.6)'}}>{s.unit}</span> : null}
+          </div>
+        </div>
+      </div>;
+    })}
+  </AbsoluteFill>;
+};
+
+/**
+ * CtaChecklist: "BÌNH LUẬN / NHẮN TIN NGAY · để nhận" + items with copper icon bubbles. props: title, sub ("để nhận"),
+ * items [{t: "BẢNG GIÁ GỐC", icon: "tag"}], y (0.1), step (0.35), x (0.5 = centred block).
+ */
+export const CtaChecklist: React.FC<P> = ({duration, title = 'BÌNH LUẬN / NHẮN TIN NGAY', sub = 'để nhận', items = [], y = 0.08, step = 0.35, at = 0.1, tone = 'copper'}) => {
+  const {frame, fps, t, W, H} = useT();
+  const o = exit(frame, fps, duration, 0.3);
+  const p0 = spring({frame: frame - at * fps, fps, config: {damping: 14, stiffness: 130}});
+  return <AbsoluteFill style={{opacity: o}}>
+    <div style={{position: 'absolute', left: 0, right: 0, top: 0, height: H * (y + 0.12 + items.length * 0.06),
+      background: 'linear-gradient(180deg, rgba(4,8,14,0.7) 0%, rgba(4,8,14,0.45) 70%, rgba(4,8,14,0) 100%)'}} />
+    <div style={{position: 'absolute', left: 0, right: 0, top: H * y, display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: Math.min(1, p0 * 1.5),
+      transform: `translateY(${(1 - p0) * 30}px)`}}>
+      <Icon24 name="chat" size={52} />
+      <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 56, color: '#fff', textTransform: 'uppercase', textShadow: '0 3px 12px rgba(0,0,0,0.6)', marginTop: 8,
+        whiteSpace: 'nowrap'}}>{title}</div>
+      {sub ? <div style={{fontFamily: SANS, fontWeight: 500, fontSize: 28, color: 'rgba(255,240,225,0.85)', marginTop: 2}}>{sub}</div> : null}
+      <div style={{display: 'flex', flexDirection: 'column', gap: 22, marginTop: 30, alignItems: 'flex-start'}}>
+        {items.map((it: any, i: number) => {
+          const p = spring({frame: frame - (at + 0.4 + i * step) * fps, fps, config: {damping: 13, stiffness: 150, mass: 0.6}});
+          return <div key={i} style={{display: 'flex', alignItems: 'center', gap: 20, opacity: Math.min(1, p * 1.5), transform: `translateX(${(1 - p) * -40}px)`}}>
+            <div style={{width: 58, height: 58, borderRadius: 99, background: CARD_BG[tone] || CARD_BG.copper, display: 'grid', placeItems: 'center', boxShadow: '0 6px 14px rgba(0,0,0,0.4)',
+              border: tone === 'champagne' ? '1.5px solid #D2B072' : 'none'}}>
+              <Icon24 name={it.icon || 'check'} size={30} /></div>
+            <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 40, color: '#fff', textTransform: 'uppercase', textShadow: '0 3px 10px rgba(0,0,0,0.6)', whiteSpace: 'nowrap'}}>{it.t || it}</div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </AbsoluteFill>;
+};
+
+/**
+ * TagLabel: the agency pin card over footage or a photo, pointing at something (a room feature, a tower). props: name, kicker,
+ * icon, x, y (where the marker tip sits), at, tone (copper | gold | navy), pin (true: teardrop marker; false: card only).
+ */
+export const TagLabel: React.FC<P> = ({duration, name = 'NHÃN', kicker, icon, x = 0.5, y = 0.6, at = 0, tone = 'copper', pin = true}) => {
+  const {frame, fps, W, H} = useT();
+  const p = spring({frame: frame - at * fps, fps, config: {damping: 12, stiffness: 150, mass: 0.6}});
+  const o = exit(frame, fps, duration, 0.3);
+  return <AbsoluteFill style={{opacity: o}}>
+    <div style={{position: 'absolute', left: x * W, top: y * H, transform: `translate(-50%, ${pin ? '-100%' : '-50%'})`}}>
+      {pin ? <AgencyPin name={name} kicker={kicker} icon={icon} tone={tone} p={p} />
+        : <div style={{background: CARD_BG[tone] || CARD_BG.copper, borderRadius: 8, padding: '12px 26px', textAlign: 'center', whiteSpace: 'nowrap', opacity: Math.min(1, p * 1.5),
+          transform: `scale(${0.7 + 0.3 * p})`, boxShadow: '0 10px 24px rgba(0,0,0,0.45)'}}>
+          {kicker ? <div style={{fontFamily: SANS, fontWeight: 500, fontSize: 22, color: 'rgba(255,240,225,0.9)'}}>{kicker}</div> : null}
+          <div style={{fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', textTransform: 'uppercase'}}>{name}</div></div>}
+    </div>
+  </AbsoluteFill>;
+};
+
+export const ESTATE_COMPS: Record<string, React.FC<any>> = {GeoMap, Building3D, FloorPlan2D, LotCard, GlobeIntro, KnockoutText, InvertTitle, LensFlare, TrackedPlot, LuxLabel, StatTitle, StepTimeline, CtaChecklist, TagLabel};

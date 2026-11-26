@@ -261,6 +261,17 @@ def trend_timed(comp: str, props: dict, dur: float, viral: bool) -> list[tuple[s
     if comp == "KnockoutText":
         fa = float(props.get("fly_at") or dur - float(props.get("fly_dur", 1.0)) - 0.1)
         return [(f("hit", "thump"), float(props.get("at", 0)) + 0.05, 0.14), (f("whoosh", "dwhoosh"), fa, 0.18)]
+    if comp == "StatTitle":  # thump as the number lands, ticking while it counts
+        at = float(props.get("at", 0))
+        return [(f("hit", "thump"), at, 0.16), (f("riser", "data"), at + 0.05, 0.08)]
+    if comp == "StepTimeline":
+        at, st = float(props.get("at", 0.2)), float(props.get("step", 0.6))
+        return [(f("pop", "popup"), at + i * st, 0.13) for i in range(len(props.get("steps") or []))]
+    if comp == "CtaChecklist":
+        at, st = float(props.get("at", 0.1)), float(props.get("step", 0.35))
+        return [(f("whoosh", "dwhoosh"), at, 0.14)] + [(f("pop", "popup"), at + 0.4 + i * st, 0.12) for i in range(len(props.get("items") or []))]
+    if comp == "TagLabel":
+        return [(f("pop", "popup"), float(props.get("at", 0)), 0.14)]
     if comp == "LuxLabel":
         return [(f("swipe", "data"), float(props.get("at", 0)) + 0.05, 0.08)]
     if comp == "InvertTitle":
