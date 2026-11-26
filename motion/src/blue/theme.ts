@@ -114,10 +114,10 @@ export const GRAD = `linear-gradient(95deg, ${T('#2448F5')} 0%, ${C.blue} 40%, $
 // theme {keyword: "solid"}: keywords in the real brand colour with a thin white rim (pale red reads pink)
 const KW_SOLID = (TH as {keyword?: string} | null)?.keyword === 'solid';
 export const GRAD_ONVIDEO = KW_SOLID
-  ? `linear-gradient(95deg, ${T('#5272FF')} 0%, ${T('#3158FF')} 55%, ${T('#2448F5')} 100%)`
+  ? `linear-gradient(180deg, ${T('#3F64FF')} 0%, ${T('#3158FF')} 45%, ${T('#2142E0')} 100%)`
   : T('linear-gradient(95deg, #FFFFFF 0%, #E4ECFF 45%, #B4CBFF 100%)');
 export const GLOW_ONVIDEO = KW_SOLID
-  ? 'drop-shadow(0 0 1.5px rgba(255,255,255,0.9)) drop-shadow(0 3px 12px rgba(0,0,0,0.55))'
+  ? 'drop-shadow(0 0 1.2px rgba(0,0,0,0.85)) drop-shadow(0 1px 1px rgba(0,0,0,0.6)) drop-shadow(0 3px 12px rgba(0,0,0,0.55))'
   : T('drop-shadow(0 3px 10px rgba(0,0,0,0.55)) drop-shadow(0 0 20px rgba(60,100,255,0.7))');
 export const GRAD_NAVY = `linear-gradient(95deg, ${C.navy} 0%, ${C.navy2} 100%)`;
 export const GRAD_WHITE = T('linear-gradient(180deg, #FFFFFF 30%, #C9DAFF 100%)');
