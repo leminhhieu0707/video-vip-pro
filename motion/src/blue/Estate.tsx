@@ -810,7 +810,7 @@ export const LotCard: React.FC<P> = ({duration, title = 'LÔ 01', rows = [], pri
         const p = lerp(t, at + 0.35 + i * step, at + 0.6 + i * step);
         return look === 'luxury' ? <div key={i} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '14px 0',
           borderTop: `1px solid ${i ? 'rgba(255,255,255,0.22)' : color}`, opacity: p, transform: `translateX(${(1 - p) * 30}px)`}}>
-          <span style={{...LUX.cap, fontSize: 23, color: 'rgba(255,255,255,0.78)'}}>{r.k}</span><span style={{...LUX.num, fontSize: 48}}>{r.v}</span></div>
+          <span style={{...LUX.cap, fontSize: 29, letterSpacing: '0.1em', fontWeight: 700, color: 'rgba(255,255,255,0.9)'}}>{r.k}</span><span style={{...LUX.num, fontSize: 54}}>{r.v}</span></div>
           : <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.12)',
           opacity: p, transform: `translateX(${(1 - p) * 30}px)`, fontSize: 32}}>
           <span style={{color: 'rgba(255,255,255,0.7)', fontWeight: 600}}>{r.k}</span><span style={{fontWeight: 800}}>{r.v}</span></div>;
