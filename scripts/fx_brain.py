@@ -39,7 +39,7 @@ INDUSTRY = {  # style, effects per 30 s, theme fallback, relight preset, keyword
     "realestate": ("calm", 5, "gold", "bright_luxe", "đất|nhà phố|căn hộ|dự án|sổ đỏ|m2|mét vuông|lô đất|mặt tiền|bất động sản"),
     "spa": ("calm", 5, "pink", "soft_window", "spa|da mặt|mụn|trị liệu|làm đẹp|nail|mi|makeup|chăm sóc da"),
     "food": ("story", 6, "orange", "warm_cafe", "quán|món|ngon|ăn uống|cà phê|trà sữa|bún|phở|menu"),
-    "edu": ("calm", 6, "blue", "soft_window", "khoá học|học viên|bài học|kiến thức|chia sẻ|mẹo|ai|claude|chatgpt|prompt"),
+    "edu": ("calm", 6, "blue", "soft_window", "khoá học|học viên|bài học|kiến thức|chia sẻ|mẹo|ai|claude|chatgpt|prompt|skill|câu lệnh|tự động|hiệu ứng|edit|phần mềm|công cụ|hướng dẫn"),
     "finance": ("calm", 5, "teal", "cine_dark", "lãi suất|vay|ngân hàng|bảo hiểm|đầu tư|tiết kiệm|cổ phiếu"),
     "gym": ("hype", 8, "red", "cine_dark", "gym|tập luyện|kg|cơ bụng|giảm cân|sức khoẻ"),
     "travel": ("story", 5, "sky", "warm_cafe", "du lịch|khách sạn|homestay|resort|biển|tour"),
@@ -253,6 +253,8 @@ def read(sent: dict, n_total: int) -> dict:
                 steps.append(p)
         if len(steps) >= 3:
             short_items = steps
+    if len(short_items) >= 3:  # "số chạy, đóng dấu, kính vỡ": a spoken list even without a list word
+        tags.add("list")
     energy = len(tags & {"shock", "price", "discount", "question", "quality"}) + (1 if "!" in t else 0)
     return {"tags": sorted(tags), "prices": ps, "year": (YEAR_RE.search(t).group(0) if YEAR_RE.search(t) else None),
             "product": prod.group(0) if prod else None, "list_n": int(n_list.group(1)) if n_list else None,
@@ -279,6 +281,14 @@ def keyword(sent: dict, info: dict) -> str:
     return max(cand, key=len) if cand else (ws[0] if ws else "")
 
 
+GLUE = ["học sinh sinh viên", "học sinh", "sinh viên", "pro max", "chính hãng", "ưu đãi", "điện biên phủ", "đà nẵng", "hà nội",
+                "cực kỳ", "chương trình", "điện thoại", "phụ kiện", "bảo hành", "kiểm tra", "tư vấn", "giá tốt", "lên đời", "nguyên zin",
+                "hấp dẫn", "tiết kiệm", "mọi người", "các bạn", "khách hàng", "cửa hàng", "thành phố", "hôm nay", "bây giờ", "trả góp",
+                "miễn phí", "khuyến mãi", "giảm giá", "tai nghe", "ốp lưng", "kính cường lực", "cường lực", "thay pin", "1 năm", "đi học",
+                "quyết định", "thoải mái", "tình trạng", "chất lượng", "uy tín", "sản phẩm", "dịch vụ", "đặt hàng", "liên hệ", "nhắn tin",
+                "theo dõi", "đăng ký", "bình luận", "hướng dẫn", "chia sẻ", "kinh nghiệm", "đầu tiên", "cuối cùng", "tiếp theo"]
+
+
 def captions(sent: dict, info: dict, max_words: int = 6) -> list[dict]:
     """Two-tier caption chunks timed on the words (BlueText: small top line + big line with one **keyword**).
     Natural reading order always: the small line is the start of the phrase, the big line its last 3 words."""
@@ -292,12 +302,7 @@ def captions(sent: dict, info: dict, max_words: int = 6) -> list[dict]:
     toks_n = [strip(w["word"].strip(",.!?")) for w in ws]
     glue = set()
     phrases = [p["text"] for p in info["prices"]] + [keyword(sent, info), info.get("product") or "", BRAND_HINT.get("name", "")]
-    phrases += ["học sinh sinh viên", "học sinh", "sinh viên", "pro max", "chính hãng", "ưu đãi", "điện biên phủ", "đà nẵng", "hà nội",
-                "cực kỳ", "chương trình", "điện thoại", "phụ kiện", "bảo hành", "kiểm tra", "tư vấn", "giá tốt", "lên đời", "nguyên zin",
-                "hấp dẫn", "tiết kiệm", "mọi người", "các bạn", "khách hàng", "cửa hàng", "thành phố", "hôm nay", "bây giờ", "trả góp",
-                "miễn phí", "khuyến mãi", "giảm giá", "tai nghe", "ốp lưng", "kính cường lực", "cường lực", "thay pin", "1 năm", "đi học",
-                "quyết định", "thoải mái", "tình trạng", "chất lượng", "uy tín", "sản phẩm", "dịch vụ", "đặt hàng", "liên hệ", "nhắn tin",
-                "theo dõi", "đăng ký", "bình luận", "hướng dẫn", "chia sẻ", "kinh nghiệm", "đầu tiên", "cuối cùng", "tiếp theo"]
+    phrases += GLUE
     for ph in phrases:
         pt = [strip(x) for x in str(ph).split() if strip(x)]
         if len(pt) < 2:
@@ -351,6 +356,80 @@ def captions(sent: dict, info: dict, max_words: int = 6) -> list[dict]:
     return out
 
 
+GRAD = {"gold": ["#FFE7A3", "#FF8A1F"], "orange": ["#FFE7A3", "#FF8A1F"], "red": ["#FFC1B0", "#FF3B30"], "blue": ["#A8ECFF", "#2E8BFF"],
+        "sky": ["#C9F4FF", "#2FC6FF"], "green": ["#E2FF8F", "#2FD47A"], "pink": ["#FFC4E1", "#FF4FA0"], "purple": ["#E0C8FF", "#8A5CFF"],
+        "mono": ["#FFFFFF", "#C9CED8"]}
+STOP_S = {strip(x) for x in STOP if x not in ("một", "hai", "ba")} | {strip(x) for x in "bạn mình em anh chị tôi ta họ nó cái chỗ thứ để từ khi nếu vì như nên rồi lại ra vào lên xuống đi về nào gì sao thế ấy".split()}
+COVERED = {"HudChapter", "NeonTunnel", "frost", "ExplainCanvas", "PunchWord", "MetalText", "QuoteCard", "VsCards", "Odometer", "CountUp",
+           "PriceSlash", "GiantCaption", "DecodeText", "GlassText", "NeonText", "CubeFlip", "Stamp", "NumberTitle"}  # these carry the words above the head
+
+
+def wordpop(sents: list[dict], infos: list[dict], picks: dict, a: dict, theme: str) -> list[dict]:
+    """WordStack lockups (word-by-word kinetic captions): phrase chunks timed on the words, one key per chunk (the sentence
+    keyword, else the longest content word), placed just above the measured head top; now and then a wide key tucks behind the head."""
+    grad = GRAD.get(theme, GRAD["gold"])
+    head = a["person"][1]
+    y_up, y_behind = round(max(0.2, head - 0.11), 3), round(min(0.6, head - 0.025), 3)  # behind: lead words stay above the head, the key crosses its top
+    x = round(min(0.62, max(0.38, a["face"][0])), 3)
+    out, last_behind = [], -9
+    for s, info in zip(sents, infos):
+        if picks.get(s["i"], {}).get("name") in COVERED:
+            continue
+        ws = [w for w in s["words"] if w["word"].strip()]
+        if not ws:
+            continue
+        kw = keyword(s, info)
+        phrases = sorted({strip(x_) for x_ in [kw] + [p_["text"] for p_ in info["prices"]] + GLUE + [BRAND_HINT.get("name", "")]
+                          if x_ and len(x_.split()) > 1}, key=lambda x_: -len(x_.split()))
+        toks, i = [], 0
+        while i < len(ws):
+            hit = 0
+            for ph in phrases:
+                n = len(ph.split())
+                if i + n <= len(ws) and " ".join(strip(x_["word"].strip(",.!?")) for x_ in ws[i:i + n]) == ph:
+                    hit = n
+                    break
+            g = ws[i:i + (hit or 1)]
+            toks.append({"w": " ".join(x_["word"] for x_ in g), "start": g[0]["start"], "end": g[-1].get("end", g[-1]["start"] + 0.2)})
+            i += hit or 1
+        chunks, cur = [], []
+        for j, tk in enumerate(toks):
+            cur.append(tk)
+            nx = toks[j + 1] if j + 1 < len(toks) else None
+            if (re.search(r"[.,!?;:]$", tk["w"]) or not nx or nx["start"] - tk["end"] > 0.3 or len(cur) >= 6
+                    or (len(cur) >= 4 and nx["start"] - tk["end"] > 0.12)):
+                chunks.append(cur)
+                cur = []
+        kws = strip(kw)
+        for ci, ch in enumerate(chunks):
+            names = [strip(tk["w"].strip(",.!?")) for tk in ch]
+            # key: a number / price > a glued phrase (multi-word token) > the last two content syllables (Vietnamese stresses
+            # the end of the phrase: "phụ đề HAI TẦNG", "zoom theo NHỊP NÓI") > the sentence keyword > the longest word
+            content = [j for j, nm in enumerate(names) if nm not in STOP_S]
+            kset = [j for j, nm in enumerate(names) if re.search(r"\d", nm)][:1]
+            if not kset:
+                kset = [j for j, tk in enumerate(ch) if " " in tk["w"].strip() and names[j] not in STOP_S][-1:]
+            if not kset and len(content) >= 2 and content[-1] - content[-2] == 1 and len(ch) >= 2:
+                kset = [content[-2], content[-1]]
+            if not kset:
+                kset = [j for j, nm in enumerate(names) if nm == kws][:1] or ([max((len(names[j]), j) for j in content)[1]] if content else [len(ch) - 1])
+            kidx = kset[0] if kset else None
+            st = max(s["start"], ch[0]["start"] - 0.06)
+            en = (chunks[ci + 1][0]["start"] - 0.03) if ci + 1 < len(chunks) else s["end"]
+            if en - st < 0.35:
+                continue
+            words = [{"w": re.sub(r"[.,!?;:]+$", "", tk["w"]), "t": round(tk["start"] - st, 3), "k": 1 if j in kset else 0} for j, tk in enumerate(ch)]
+            klen = len(" ".join(words[j]["w"] for j in kset))
+            behind = bool(a["tripod"] and klen >= 8 and head > 0.3 and len(out) - last_behind >= 6)
+            o = {"type": "motion", "comp": "WordStack", "start": round(st, 3), "end": round(en, 3),
+                 "props": {"words": words, "x": x, "y": y_behind if behind else y_up, "key_size": 190 if behind else 175, "grad": grad}}
+            if behind:
+                o["behind"] = True
+                last_behind = len(out)
+            out.append(o)
+    return out
+
+
 def word_time(sent: dict, phrase: str) -> float:
     """Timeline time of the first word of `phrase` inside the sentence (effects land on the word that names them)."""
     if not phrase or not sent["words"]:
@@ -391,15 +470,47 @@ CAT = [
     ("FollowCard", {"cta"}, 8, False, "bottom", {"hype", "calm", "story"}),  # only on the last two sentences (see ok())
     ("NameTag", {"intro"}, 7, False, "bottom", {"hype", "calm", "story"}),
     ("Countdown", {"question"}, 3, False, "top", {"hype"}),
+    ("ExplainCanvas", {"list", "process", "compare"}, 8, True, "full", {"calm", "story", "hype"}),  # NARRATE pack: speaker in a live bubble
 ]
 HEROES_GAP = {"calm": 7.0, "story": 6.5, "hype": 5.0}
 BRAND_HINT: dict = {}
+
+
+ICON_WORDS = [("money", "giá|tiền|triệu|tỷ|chi phí|lãi|vốn"), ("home", "nhà|căn|phòng|dự án|chung cư"), ("pin", "vị trí|địa chỉ|gần|đường|quận"),
+              ("clock", "phút|giờ|ngày|nhanh chóng|thời gian"), ("shield", "bảo hành|an toàn|pháp lý|sổ"), ("bolt", "tự động|nhanh|ngay|liền"),
+              ("users", "khách|người|đội|nhân viên"), ("chat", "phụ đề|chữ|nói|tư vấn|nhắn"), ("search", "tìm|zoom|soi|kiểm tra"),
+              ("chart", "tăng|doanh thu|lợi nhuận|biểu đồ"), ("car", "xe|ô tô"), ("school", "trường|học"), ("wave", "biển|sông|hồ bơi"),
+              ("tree", "cây|công viên|xanh"), ("star", "đẹp|sang|cao cấp|hiệu ứng")]
+
+
+def icon_for(text: str) -> str:
+    low = unicodedata.normalize("NFC", text.lower())
+    return next((ic for ic, rx in ICON_WORDS if re.search(rx, low)), "check")
 
 
 def build(name: str, sent: dict, info: dict, a: dict, ctx: dict) -> list[dict] | None:
     """Overlay dicts for one pick (timeline seconds), or None when the sentence lacks what the effect needs."""
     s, e = sent["start"], sent["end"]
     ps = info["prices"]
+    if name == "ExplainCanvas":  # the speaker shrinks into a live bubble while the list / comparison is drawn
+        if e - s < 2.0 or a.get("face_seen", 1) < 0.5:
+            return None
+        face = [round(a["face"][0], 3), round(a["face"][1], 3)]
+        ctx["_canvas_n"] = ctx.get("_canvas_n", 0) + 1
+        bg = ("paper", "dark", "brand")[(ctx["_canvas_n"] - 1) % 3]
+        if len(info["items"]) >= 2:
+            items = info["items"][:4]
+            if max(len(x) for x in items) > 18:
+                return None
+            its = [{"icon": icon_for(x), "label": x[:1].upper() + x[1:], "t": round(max(0.4, word_time(sent, x) - s), 2)} for x in items]
+            return [{"type": "motion", "comp": "ExplainCanvas", "start": s, "end": e,
+                     "props": {"mode": "tiles", "items": its, "face": face, "bg": bg, "accent": ctx.get("accent"), "at": 0.3}}]
+        if len(ps) >= 2 and ps[0]["value"] != ps[1]["value"]:
+            return [{"type": "motion", "comp": "ExplainCanvas", "start": s, "end": e,
+                     "props": {"mode": "compare", "face": face, "bg": bg, "accent": ctx.get("accent"),
+                               "a": {"label": "Trước", "value": ps[0]["show"] + (" " + ps[0]["unit"] if ps[0].get("unit") else ""), "icon": "clock"},
+                               "b": {"label": "Bây giờ", "value": ps[1]["show"] + (" " + ps[1]["unit"] if ps[1].get("unit") else ""), "icon": "bolt"}}}]
+        return None
     top_y = max(0.1, min(0.2, a["person"][1] * 0.55))
     if name == "Odometer" and ps:
         p = ps[-1]
@@ -652,13 +763,17 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     free_side = "right" if (1 - a["person"][2]) >= a["person"][0] else "left"
     ctx = {"brand": opt.brand or "", "style": style, "free_side": free_side, "broll": broll_files(opt.broll), "logo": opt.logo or "",
            "metal": "red" if theme == "red" else ("silver" if theme in ("blue", "mono", "sky") else "gold"),
-           "price_label": ""}
+           "price_label": "", "accent": GRAD.get(theme, GRAD["gold"])[1]}
+    wp_mode = opt.captions if opt.captions != "auto" else ("wordpop" if words and ind != "news" else "blue")
+    TEXTY = {"NeonText", "DecodeText", "GlassText", "MetalText", "PunchWord", "CubeFlip", "Stamp", "NumberTitle", "Checklist"}
     # score every (sentence, effect)
     cands = []
     for s, info in zip(sents, infos):
         tags = set(info["tags"])
         for name, serves, base, hero, zone, styles in CAT:
             if not (styles & style_set):
+                continue
+            if wp_mode == "wordpop" and name in TEXTY:
                 continue
             hit = serves & tags
             if not hit:
@@ -697,7 +812,7 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
                 {"type": "motion", "comp": "GiantCaption", "start": s0["start"] + 0.12, "end": s0["end"], "behind": True,
                  "props": {"text": k0, "y": round(max(0.12, a["person"][1] + 0.03), 3), "size": 300 if len(k0) <= 6 else 220}}]
         picks[0] = {"name": "GiantCaption", "why": "hook: keyword behind the head", "layers": hook}
-    elif 2 <= len(k0) <= 16:
+    elif 2 <= len(k0) <= 16 and wp_mode != "wordpop":
         hook = build("DecodeText", s0, i0, a, ctx)
         if hook:
             picks[0] = {"name": "DecodeText", "why": "hook: keyword reveal", "layers": hook}
@@ -765,7 +880,7 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     for i in range(1, len(sents)):
         if i in cam:
             continue
-        if picks.get(i, {}).get("name") in ("popout", "dolly", "frost", "GiantCaption", "HudChapter", "NeonTunnel"):
+        if picks.get(i, {}).get("name") in ("popout", "dolly", "frost", "GiantCaption", "HudChapter", "NeonTunnel", "ExplainCanvas"):
             cam[i] = "STILL"
             continue
         mv = cyc[c % len(cyc)]
@@ -791,16 +906,21 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     srcs = {c.get("src") or c.get("source") for c in ar["cuts"]}
     if len(srcs - {None}) > 1:
         studio["color_match"] = True
-    caps = []
-    for s, info in zip(sents, infos):
-        if picks.get(s["i"], {}).get("name") in ("HudChapter", "NeonTunnel"):  # full-screen graphics carry their own words
-            continue
-        caps += captions(s, info)
+    caps, wpop = [], []
+    mode = wp_mode
+    if mode == "wordpop":
+        wpop = wordpop(sents, infos, picks, a, theme)
+    else:
+        for s, info in zip(sents, infos):
+            if picks.get(s["i"], {}).get("name") in ("HudChapter", "NeonTunnel", "ExplainCanvas"):  # full-screen graphics carry their own words
+                continue
+            caps += captions(s, info)
     loop = (opt.aspect == "9:16" and total < 75)
     return {"industry": ind, "style": style, "theme": theme, "density_target": target, "sentences": [
         {"i": s["i"], "start": s["start"], "end": s["end"], "text": s["text"], "tags": info["tags"], "cam": cam.get(s["i"], "STILL"),
          "effect": picks.get(s["i"], {}).get("name"), "why": picks.get(s["i"], {}).get("why")} for s, info in zip(sents, infos)],
-        "picks": {str(i): p for i, p in picks.items()}, "cam": {str(i): v for i, v in cam.items()}, "captions": caps,
+        "picks": {str(i): p for i, p in picks.items()}, "cam": {str(i): v for i, v in cam.items()}, "captions": caps, "wordpop": wpop,
+        "captions_mode": mode,
         "studio": studio, "loopback": loop}
 
 
@@ -822,6 +942,13 @@ def to_plan(ar: dict, a: dict, b: dict, opt, root: Path) -> dict:
     for c in b["captions"]:
         ov.append({"type": "motion", "comp": "BlueText", "start": c["start"], "end": c["end"],
                    "props": {"top": c["top"], "text": c["text"], "y": cap_y, "tone": "video"}})
+    if b.get("wordpop"):
+        if a["tripod"] and a.get("face_seen", 1) > 0.5:  # thin white type needs a calmer room: blur + darken behind the speaker
+            s0 = 0.0
+            if b["picks"].get("0", {}).get("name") == "GiantCaption":  # the hook already blurs sentence 0
+                s0 = b["sentences"][0]["end"]
+            ov.insert(0, {"type": "bg", "blur": 12, "tint": "0x0A0F1A@0.26", "choke": 3, "start": s0, "end": total})
+        ov += b["wordpop"]
     if b["loopback"]:
         ov.append({"type": "loopback", "duration": 0.5})
     tr = ar.get("transcript")
@@ -858,6 +985,8 @@ def main():
     ap.add_argument("--broll", default=None, help="folder or comma list of B-roll clips / screenshots (HUD chapter cards, neon tunnel)")
     ap.add_argument("--logo", default=None, help="logo image for the neon tunnel")
     ap.add_argument("--hud", default="auto", choices=["auto", "off"], help="full-screen HUD chapter on a process list (off = never)")
+    ap.add_argument("--captions", default="auto", choices=["auto", "wordpop", "blue"],
+                    help="wordpop = WordStack word-by-word lockups (default when word times exist), blue = two-tier BlueText")
     ap.add_argument("--seed", type=int, default=0, help="change it to get a different but equally valid pick")
     ap.add_argument("-o", "--out", default=None)
     ap.add_argument("--plan", default=None, help="also write a complete plan_vip.json")
@@ -868,6 +997,10 @@ def main():
     ar = json.loads(arp.read_text(encoding="utf-8"))
     src = (root / ar["src"]).resolve() if not Path(ar["src"]).is_absolute() else Path(ar["src"])
     words = []
+    if not ar.get("transcript"):  # older aroll.json: look for <video>.transcript.json next to it
+        guess = src.with_suffix(".transcript.json")
+        if guess.exists():
+            ar["transcript"] = guess.name
     if ar.get("transcript"):  # aroll.transcript.json: word times already on the aroll timeline (case kept for captions)
         tr = json.loads((root / ar["transcript"]).read_text(encoding="utf-8"))
         words = [{"start": float(w["start"]), "end": float(w["end"]), "word": unicodedata.normalize("NFC", str(w["word"]).strip())}
@@ -889,6 +1022,9 @@ def main():
               f"{' + ' + str(len(b['studio'].get('props', []))) + ' phụ kiện' if b['studio'].get('props') else ''}")
     for s in b["sentences"]:
         print(f"  {s['start']:6.2f} {s['cam']:5} {(s['effect'] or '-'):12} {('[' + ','.join(s['tags']) + ']'):28} {s['text'][:58]}")
+    if b.get("wordpop"):
+        print(f"[brain] chữ nhảy WordStack: {len(b['wordpop'])} cụm ({sum(1 for o in b['wordpop'] if o.get('behind'))} cụm nấp sau đầu)"
+              f" | từ khoá: {', '.join(' '.join(w['w'] for w in o['props']['words'] if w['k']) or '-' for o in b['wordpop'][:12])}…")
     if opt.plan:
         plan = to_plan(ar, a, b, opt, root)
         Path(opt.plan).write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")

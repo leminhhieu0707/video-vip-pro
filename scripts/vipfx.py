@@ -210,10 +210,15 @@ def round_mask(r: int) -> str:
             f"if(lte(hypot({r}-(W/2-abs(W/2-X)),{r}-(H/2-abs(H/2-Y))),{r}),255,0),255)*alpha(X,Y)/255':cb='cb(X,Y)':cr='cr(X,Y)'")
 
 
-def person_layer(cx: Ctx, clean: str, s: float, e: float, k: int) -> str:
-    """RGBA stream of just the speaker (from `clean`) for [s, e]."""
+def person_layer(cx: Ctx, clean: str, s: float, e: float, k: int, choke: float = 0) -> str:
+    """RGBA stream of just the speaker (from `clean`) for [s, e]. choke = pull the matte edge in by ~n px and soften it
+    (kills the bright rim of un-blurred wall around the hair when the room behind is blurred / darkened)."""
     c = cx.cut(clean, s, e, f"[pc{k}]")
     m = cx.matte_in(s, e, k)
+    if choke > 0:
+        n = max(1, min(8, int(round(choke))))
+        cx.fc.append(f"{m}format=gray,{','.join(['erosion'] * n)},gblur=sigma={max(0.8, n * 0.5):.1f}[mk{k}]")
+        m = f"[mk{k}]"
     cx.fc.append(f"{c}{m}alphamerge[pp{k}]")
     return f"[pp{k}]"
 
@@ -661,7 +666,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         elif chain:
             fc.append(f"{room}{','.join(chain)}[bgx{k}]")
             room = f"[bgx{k}]"
-        p = person_layer(cx, pclean, s, e, k)
+        p = person_layer(cx, pclean, s, e, k, float(o.get("choke", 0)))
         fc.append(f"{room}{p}overlay=0:0:shortest=1,format=rgba,{_fades(s, e, cx.total, fd)}[bgo{k}]")
         return _over(cx, vlast, f"[bgo{k}]", s, e, k, "b")
 

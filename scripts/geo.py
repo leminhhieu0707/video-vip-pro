@@ -392,6 +392,9 @@ def build(spec: dict, outdir: Path, W: int = 1080, H: int = 1920) -> dict:
         res["iso"] = isochrones((c_lat, c_lon), [float(m) for m in spec["isochrone_min"]])
         print(f"[geo] vùng phút: {[b['min'] for b in res['iso']]}")
     res["credit"] = SOURCES[src][1]
+    # GeoMap defaults Hiếu approved (11/2026): agency glass cards, clean dimmed satellite, only real towers in 3D; spec "map_style": "classic" opts out
+    if spec.get("map_style", "clean") == "clean":
+        res.update({"look": "agency", "clean": True, "osm3d_min": 10, "pin_focus": True})
     (outdir / "geomap.json").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
     return res
 
