@@ -17,6 +17,7 @@ Everything is drawn in a reference blue and re-coloured by the plan's `"theme"`.
 | Preset name | `"theme": "orange"` | |
 | Any colour | `"theme": "#FF6A1A"` | The dark tone is derived automatically. |
 | Primary + dark | `"theme": {"primary": "#E8B84A", "dark": "#121212"}` | Dark `#121212` gives neutral black scenes, for a luxury black-and-gold look. |
+| Solid keywords | `"theme": {"primary": "#C3110F", "dark": "#1E0504", "keyword": "solid"}` | Caption keywords on footage use the real brand colour (thin white rim) instead of the default near-white tint. Use it for red / orange brands, where the pale tint reads pink / peach. |
 
 **Presets.** `python scripts/theme.py` lists them. Vietnamese names work too.
 

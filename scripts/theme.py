@@ -86,9 +86,13 @@ def resolve(theme) -> dict | None:
             d = _derive_dark(p)
         else:
             raise ValueError(f"theme '{theme}' không hiểu — dùng mã #RRGGBB hoặc một trong: {', '.join(PRESETS)}")
-    if p.upper() == REF_PRIMARY and d.upper() == REF_DARK:
+    kw = theme.get("keyword") if isinstance(theme, dict) else None
+    if p.upper() == REF_PRIMARY and d.upper() == REF_DARK and not kw:
         return None
-    return {"primary": p.upper(), "dark": d.upper()}
+    out = {"primary": p.upper(), "dark": d.upper()}
+    if kw:  # "solid": caption keywords on footage in the real brand colour (pale red/orange reads pink/peach)
+        out["keyword"] = str(kw)
+    return out
 
 
 def _norm(c: str) -> str:
