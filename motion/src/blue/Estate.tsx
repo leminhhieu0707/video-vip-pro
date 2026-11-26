@@ -89,7 +89,7 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
   site_at, site_draw = 2, site_label, site_sub, routes = [], pins_at, rings_at, color = GOLD, fill = 'rgba(255,201,60,0.18)', compass = true,
   lots = [], lots_at, legend = true, site_edges = false, lift_at, lift_m = 4, roads = [], roads_at,
   look = 'luxury', handheld = 0, volna = false, focus_at, houses = [], follow, vector, basemap = 'satellite', vector_at = 0, streets_at,
-  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at}) => {
+  plans = [], plans_at, plans_opacity = 0.72, iso = [], iso_at, osm3d_at, osm3d_color = '#E8ECF2'}) => {
   const {frame, fps, t, W, H} = useT();
   const cam = camAt(camera.length ? camera : [{t: 0, u: site.u ?? 0.5, v: site.v ?? 0.5, z: 14}], t);
   if (follow && t >= follow.from) { // camera rides along a route (bay dọc đường vào lô), road ahead pointing up the screen
@@ -292,6 +292,14 @@ export const GeoMap: React.FC<P> = ({duration, levels = [], camera = [], site = 
           </svg>
         </>;
       })() : null}
+      {osm3d_at != null && vector && vector.buildings ? vector.buildings.slice(0, 160).map((bd: any, i: number) => { // OSM footprints extruded
+        if (t < osm3d_at + (i % 20) * 0.04) return null;
+        const rp = bd.pts.map((q: number[]) => [X(q[0]), Y(q[1])]);
+        const pr = smooth(Math.min(1, (t - osm3d_at - (i % 20) * 0.04) / 0.9));
+        const hpx = (((bd.levels || 3) * 3.3) / mpu) * k * pr;
+        return prism(rp.length > 2 && rp[0][0] === rp[rp.length - 1][0] && rp[0][1] === rp[rp.length - 1][1] ? rp.slice(0, -1) : rp, 0, Math.max(1, hpx),
+          `linear-gradient(0deg, ${osm3d_color}, ${osm3d_color}CC)`, <div style={{position: 'absolute', inset: 0, background: '#FFFFFF'}} />, `ob${i}`);
+      }) : null}
       {houses.map((hs: any, i: number) => { // houses rise (or drop from the sky) on lots: {lot | ring, floors, fh, at, drop, inset}
         const lot = hs.lot != null ? lots.find((l: any) => String(l.label) === String(hs.lot)) : null;
         const rr0 = hs.ring || (lot && lot.ring);

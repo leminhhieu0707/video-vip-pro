@@ -419,6 +419,7 @@ Rules: distances and times on screen say "khoảng / ~" and the video carries a 
 | `houses: [{lot \| ring, floors, fh, at, drop, inset}]` | houses rise on lots (or drop from the sky with a bounce, `drop: true`), window bands, CSS 3D |
 | `follow: {name, from, to, z, tilt, reverse}` | the camera flies along a POI's real route towards the site, road ahead pointing up |
 | `vector` (geo.py `"vector": {"radius_m", "buildings_m"}`) + `basemap: "night" \| "light" \| "blend"` + `vector_at` | redrawn map from OpenStreetMap (roads gold, water, parks, building footprints): the Geolayers look instead of the photo; `streets_at` writes road names along the roads |
+| `osm3d_at`, `osm3d_color` | the OpenStreetMap building footprints around the plot rise as 3D blocks (levels from OSM, else 3), up to 160 — dense only where OSM has the buildings mapped |
 | `plans` (geo.py `"plans": [{"image", "points": [[px, py, lat, lon] ×3–4]}]`) + `plans_at`, `plans_opacity` | an official planning map warped onto the satellite (multiply blend, 4 points = perspective fit) |
 | `iso` (geo.py `"isochrone_min": [5, 10, 15]`) + `iso_at` | areas reachable by car in 5 / 10 / 15 minutes (OSRM samples, smoothed) |
 | geo.py `"superres": true` | one sharper level past z 19 around the plot (Lanczos ×2 + unsharp) |
