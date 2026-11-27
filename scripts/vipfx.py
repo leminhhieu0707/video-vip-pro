@@ -27,6 +27,10 @@ TREND pack (11/2026):
   {"type": "spinwhip", "dir": "left"}  rotating whip (render.py adds it for clip "transition": "spinwhip"): 1 soft frame
       before the cut, 3 frames of heavy rotational + sideways blur, the new shot lands tilted and settles in 4 frames
       (measured frame by frame from top real-estate tour editors). Built in Python from the base file.
+  {"type": "zoomblur"}  radial zoom-through (render.py adds it for clip "transition": "zoomblur"): 5 frames rushing into
+      the frame centre with radial blur, the new shot opens out of the blur and settles in 6 frames (measured)
+  {"type": "tumble", "dir": "left"}  3D flip: the shot turns away on its vertical axis with motion blur, the next one
+      turns in (3 + 4 frames, measured)
   {"type": "glitch"} / {"type": "leak"} / {"type": "zoomthru"}  short transition looks (render.py adds them for clip
       "transition": "glitch" | "leak" | "zoomthru"); usable as plain layers too
   {"type": "impact", "at": [0.5, 0.33]}  anime impact frame: ink black-and-white, flashing negative, speed lines, shake
@@ -56,7 +60,7 @@ import theme  # noqa: E402
 from common import FFMPEG, parse_time  # noqa: E402
 
 TYPES = {"bg", "popout", "lens", "fx", "outline", "spotlight", "freeze", "whip", "loopback",
-         "neon", "clone", "dolly", "facecam", "glitch", "leak", "zoomthru", "spinwhip", "impact", "dramatic", "colorize", "relight", "prop"}
+         "neon", "clone", "dolly", "facecam", "glitch", "leak", "zoomthru", "spinwhip", "zoomblur", "tumble", "impact", "dramatic", "colorize", "relight", "prop"}
 MATTE_TYPES = ("bg", "popout", "outline", "spotlight", "neon", "clone", "dolly", "relight", "prop")
 PROPS_DIR = Path(__file__).resolve().parent.parent / "assets" / "props"
 MATTE_VERSION = 4
@@ -354,21 +358,43 @@ def _color(cx: Ctx, col: str, s: float, e: float, lab: str, fmt: str = "rgba") -
     return lab
 
 
-def spinwhip_clip(cx: Ctx, at: float, s: float, e: float, sg: int = 1, amount: float = 1.0) -> Path:
-    """Frames [s, e) of the base file with the rotating whip baked in, as a short cached MP4 (full frame)."""
+def spinwhip_clip(cx: Ctx, at: float, s: float, e: float, sg: int = 1, amount: float = 1.0, kind: str = "spinwhip"):
+    """Frames [s, e) of the base file with a measured transition baked in (spinwhip | zoomblur | tumble), as a short
+    cached MP4 (full frame). Finds the REAL cut in the base file first (segments are frame-rounded, so a late clip can
+    start 1–3 frames off its planned time) and returns (mp4, shift_seconds) so the layer lands on it."""
     import cv2
-    key = hashlib.md5(json_dumps(["spinwhip3", str(cx.base), os.path.getmtime(cx.base), at, s, e, sg, amount, cx.W, cx.H]).encode()).hexdigest()[:10]
+    import json as _json
+    key = hashlib.md5(json_dumps([kind, 4, str(cx.base), os.path.getmtime(cx.base), at, s, e, sg, amount, cx.W, cx.H]).encode()).hexdigest()[:10]
     d = cx.work / "fx"
     d.mkdir(parents=True, exist_ok=True)
-    out = d / f"spinwhip_{key}.mp4"
-    if out.exists():
-        return out
+    out = d / f"{kind}_{key}.mp4"
+    meta = out.with_suffix(".json")
+    if out.exists() and meta.exists():
+        return out, float(_json.loads(meta.read_text())["shift"])
     W, H, fps = cx.W, cx.H, cx.fps
     n = max(1, int(round((e - s) * fps)))
-    raw = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{s:.4f}", "-i", str(cx.base), "-frames:v", str(n),
+    pad = 4
+    s_ext = max(0.0, s - pad / fps)
+    lead = int(round((s - s_ext) * fps))
+    raw = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{s_ext:.4f}", "-i", str(cx.base), "-frames:v", str(n + lead + pad),
                           "-vf", f"fps={fps},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
                          capture_output=True, check=True).stdout
-    fr = np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3).astype(np.float32)
+    ext = np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3)
+    small = [cv2.resize(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), (90, 160)).astype(np.float32) for f in ext]
+    diff = [0.0] + [float(np.abs(small[i] - small[i - 1]).mean()) for i in range(1, len(small))]
+    exp = int(round((at - s_ext) * fps))
+    win = [i for i in range(max(1, exp - 3), min(len(diff), exp + 4))]
+    cut = exp
+    if win:
+        best = max(win, key=lambda i: diff[i])
+        if diff[best] > 2.5 * (float(np.median(diff[1:])) + 1e-3):
+            cut = best
+    shift = cut - exp
+    st = max(0, min(len(ext) - n, lead + shift))
+    fr = ext[st:st + n].astype(np.float32)
+    at = s_ext + cut / fps          # the real cut, in timeline seconds
+    s = s_ext + st / fps            # first output frame
+    meta.write_text(_json.dumps({"shift": (st - lead) / fps}))
 
     def rz(img, sc, deg, dx=0.0):
         M = cv2.getRotationMatrix2D((W / 2, H / 2), deg, sc)
@@ -376,9 +402,41 @@ def spinwhip_clip(cx: Ctx, at: float, s: float, e: float, sg: int = 1, amount: f
         return cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
     a = amount
+
+    def radial(img, z0, z1, n=9):  # zoom blur: average of the frame scaled between z0 and z1 about the centre
+        return np.mean([rz(img, z, 0.0) for z in np.linspace(z0, z1, n)], axis=0)
+
+    def turn(img, deg):  # perspective turn on the vertical axis (positive = right edge goes away)
+        f_ = W * 1.4
+        th = np.radians(deg)
+        pts = []
+        for x, y in ((0, 0), (W, 0), (W, H), (0, H)):
+            X, Z = (x - W / 2) * np.cos(th), (x - W / 2) * np.sin(th)
+            sc = f_ / (f_ + Z)
+            pts.append([W / 2 + X * sc, H / 2 + (y - H / 2) * sc])
+        M = cv2.getPerspectiveTransform(np.float32([[0, 0], [W, 0], [W, H], [0, H]]), np.float32(pts))
+        return cv2.warpPerspective(img, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(8, 8, 10))
+
     res = []
     for j, img in enumerate(fr):
         k = int(round((s + j / fps - at) * fps))  # frame index relative to the cut
+        if kind == "zoomblur":  # 5 frames in (ease-in, zoom to ~2.2x), 6 frames out from ~1.8x (ease-out)
+            if k < 0:
+                p0, p1 = ((k + 5) / 5) ** 2, ((k + 6) / 5) ** 2
+                img = radial(img, 1 + 1.2 * a * p0, 1 + 1.2 * a * p1)
+            else:
+                q0, q1 = (1 - k / 6) ** 3, (1 - (k + 1) / 6) ** 3
+                img = radial(img, 1 + 0.8 * a * q0, 1 + 0.8 * a * max(0, q1))
+            res.append(np.clip(img, 0, 255).astype(np.uint8))
+            continue
+        if kind == "tumble":  # 3 frames turning away to 70 deg, 4 frames turning in from -70 deg, blur between angles
+            if k < 0:
+                a0, a1 = 70 * a * ((k + 3) / 3) ** 2, 70 * a * ((k + 4) / 3) ** 2
+            else:
+                a0, a1 = -70 * a * (1 - k / 4) ** 2, -70 * a * max(0, 1 - (k + 1) / 4) ** 2
+            img = np.mean([turn(img, sg * dd) for dd in np.linspace(a0, a1, 5)], axis=0)
+            res.append(np.clip(img, 0, 255).astype(np.uint8))
+            continue
         if k <= -1:   # outgoing shot starts to turn: light rotational smear
             img = np.mean([rz(img, 1.0, sg * dd * a) for dd in np.linspace(0, 6, 5)], axis=0)
         elif k <= 2:  # 3 frames of heavy spin + sideways travel
@@ -396,7 +454,7 @@ def spinwhip_clip(cx: Ctx, at: float, s: float, e: float, sg: int = 1, amount: f
         p.stdin.write(im.tobytes())
     p.stdin.close()
     p.wait()
-    return out
+    return out, (st - lead) / fps
 
 
 def _cache_png(cx: Ctx, tag: str, parts) -> Path:
@@ -672,7 +730,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     fd = float(o.get("fade", 0.25))
     if t == "outline":
         return outline(o, k, vlast, cx, s, e, fd)
-    if t in ("freeze", "loopback", "facecam", "leak", "spinwhip"):  # built from stills / the base file, no copy of the live stream needed
+    if t in ("freeze", "loopback", "facecam", "leak", "spinwhip", "zoomblur", "tumble"):  # built from stills / the base file, no copy of the live stream needed
         clean = None
     else:
         fc.append(f"{vlast}split=2[vk{k}][cl{k}]")
@@ -851,9 +909,10 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         fc.append(f"[ws{k}][wbb{k}]blend=all_expr='A+(B-A)*min(1,1.6*max(0,1-abs(T-{at:.3f})/{hd:.3f}))',format=yuv420p[wo{k}]")
         return _over(cx, vlast, f"[wo{k}]", s, e, k, "w")
 
-    if t == "spinwhip":
-        mp4 = spinwhip_clip(cx, float(o.get("_at", s + 1 / cx.fps)), s, e, 1 if o.get("dir", "left") == "left" else -1,
-                            float(o.get("amount", 1.0)))
+    if t in ("spinwhip", "zoomblur", "tumble"):
+        mp4, sh = spinwhip_clip(cx, float(o.get("_at", s + 1 / cx.fps)), s, e, 1 if o.get("dir", "left") == "left" else -1,
+                                float(o.get("amount", 1.0)), kind=t)
+        s, e = s + sh, e + sh  # the real cut in the base file can sit a frame or two off the planned clip start
         i = cx.add_input(["-i", str(mp4)])
         fc.append(f"[{i}:v]fps={cx.fps},format=yuv420p,setpts=PTS-STARTPTS+{s:.3f}/TB[sw{k}]")
         return _over(cx, vlast, f"[sw{k}]", s, e + 0.5 / cx.fps, k, "s")

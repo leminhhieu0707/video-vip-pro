@@ -33,6 +33,9 @@ Pick the recipe closest to the request and adapt it. They are starting points, n
 - Exterior photos: `zoom: "in"` at 0.08–0.12. Interior: `zoom: "out"`. Keep color grades subtle (`saturation` 1.1, `contrast` 1.05).
 - Contact card at the end: an agent photo as `image` with `radius`, plus name and phone as `text`.
 
+### B1. Car / property ad, MotionFlix look (energy)
+Measured from MotionFlix (3 shorts): shots 0.9–1.9 s cut on the music (2 beats or 1 bar), almost every cut a blurred move, rotated through `zoomblur` → `spinwhip` → `tumble` (never the same twice in a row), one plain cut + beat punch (`zooms`) for breathing room. Words: one `PunchWord` hook, `SpacedCaps` feature labels naming only what is on screen, a `TrackLabel` glued to the hero part (wheel, door), `NeonText` for the model / project name at the end. Whoosh / bass on 2–3 moves only. Grade `net` for phone / Facebook footage. Example builder: `Mo Bang BDS/test_reel/build_motionflix.py` on Hiếu's machine.
+
 ### B2. Walkthrough tour, listing-editor look (`templates/build_tour.py`)
 Measured frame by frame from top US listing editors (6 shorts, ~6,200 frames), then toned down for Vietnamese taste. One phone walkthrough clip + a voice-over is enough.
 - **Rhythm:** B-roll shots 0.9–1.7 s, cut on the **words**, not on the music beat (only 2–4 cuts per video land on a beat). About 80 % hard cuts.

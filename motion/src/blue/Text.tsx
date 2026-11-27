@@ -532,7 +532,31 @@ export const BeatText: React.FC<P> = ({duration, text = 'SALE|SALE|SALE', beats 
   </At>;
 };
 
+// ================================================================ 27. SpacedCaps — wide-tracked small caps with a soft glow (ad look)
+/** {text, sub?, y 0.6, size 44, track 0.32 (em), color '#fff', glow '#fff', cps 40, font 'MON'} — measured from top
+ * real-estate / car ad editors: white caps tracked ~0.3 em, a soft halo, letters arriving left to right in ~1 frame each,
+ * a fast fade out. A thin `sub` line can sit under it in the accent colour. */
+export const SpacedCaps: React.FC<P> = ({duration, text = 'ĐẲNG CẤP', sub = '', y = 0.6, size = 44, track = 0.32, color = '#FFFFFF',
+  glow = 'rgba(255,255,255,0.55)', cps = 40, font = 'MON', accent = '#F8A048'}) => {
+  const {t, W} = useT();
+  const chars = Array.from(String(text).normalize('NFC').toUpperCase());
+  const S = Math.min(size, (W * 0.86) / Math.max(1, chars.length * (0.72 + track)));
+  const out = lerp(t, duration - 0.15, duration, 0, 1);
+  const F = `${font}, BVP, sans-serif`;
+  return <AbsoluteFill style={{opacity: 1 - out}}>
+    <div style={{position: 'absolute', left: 0, right: 0, top: `${y * 100}%`, transform: 'translateY(-50%)', textAlign: 'center'}}>
+      <div style={{fontFamily: F, fontWeight: 700, fontSize: S, letterSpacing: `${track}em`, color, whiteSpace: 'pre',
+        textShadow: `0 0 ${S * 0.35}px ${glow}, 0 2px 8px rgba(0,0,0,0.55)`, paddingLeft: `${track}em`}}>
+        {chars.map((c, i) => <span key={i} style={{opacity: Math.min(1, Math.max(0, (t * cps - i) / 2))}}>{c}</span>)}
+      </div>
+      {sub ? <div style={{fontFamily: F, fontWeight: 500, fontSize: S * 0.62, letterSpacing: '0.22em', color: T(accent), marginTop: S * 0.35,
+        opacity: lerp(t, chars.length / cps, chars.length / cps + 0.2, 0, 1), textShadow: '0 2px 8px rgba(0,0,0,0.55)'}}>{String(sub).toUpperCase()}</div> : null}
+    </div>
+  </AbsoluteFill>;
+};
+
 export const TEXT_COMPS: Record<string, React.FC<any>> = {
+  SpacedCaps,
   Text3D, WeaveText, ProjectText, MetalText, GlassText, NeonText, WriteOn, SliceText, WeightPulse, DustText, PunchWord, DocLabel, QuoteCard,
   MarqueeRows, TrackLabel, RiseText, MirrorText, FocusText, Odometer, SealBadge, CubeFlip, RaysTitle, InkText, RansomText, AIChat, BeatText,
 };

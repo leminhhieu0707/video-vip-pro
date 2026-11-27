@@ -336,6 +336,7 @@ All are `{"type": "motion", "comp": NAME, "props": {...}}`; sizes auto-fit the f
 |---|---|---|
 | `MetalText` | `text`, `sub`, `metal` gold/silver/chrome/red, `sweepAt` | Extruded metal letters with one light sweep. Prices, titles, thumbnails (red-gold brands). |
 | `NeonText` | `text`, `color`, `script` | Neon sign switching on with flicker, then humming. |
+| `SpacedCaps` | `text`, `sub`, `y`, `size` 44, `track` 0.32, `accent` | Ad-style label: white caps tracked ~0.3 em with a soft halo, letters arriving left to right, optional accent `sub` line. The car / property feature label of the MotionFlix look. |
 | `WriteOn` | `text`, `dur` 1.4, `underline` | Handwritten (Dancing Script, Vietnamese) signature drawing itself, then a flourish. Shop name, sign-off. |
 | `SliceText` | `text`, `slices` 4 | Bands slide in from alternate sides and lock together. |
 | `WeightPulse` | `text` with one `**keyword**` | A caption whose keyword thickens and grows as it is said. Subtle emphasis. |

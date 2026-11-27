@@ -200,7 +200,9 @@ def ramp_map(spec, src_len: float, steps: int = 24) -> tuple[str, float, list[tu
 
 
 # ------------------------------------------------------------------ STUDIO LOOK: colour match between clips
-TREND_TX = {"whip": 0.36, "glitch": 0.24, "leak": 0.7, "zoomthru": 0.5, "spinwhip": 0.27}
+TREND_TX = {"whip": 0.36, "glitch": 0.24, "leak": 0.7, "zoomthru": 0.5, "spinwhip": 0.27, "zoomblur": 0.37, "tumble": 0.24}
+# frames before / after the cut for the Python-built transitions (measured from top listing editors)
+PY_TX = {"spinwhip": (1, 7), "zoomblur": (5, 6), "tumble": (3, 4)}
 
 
 def _seg_stats(f: Path) -> dict | None:
@@ -1367,9 +1369,10 @@ def trend_layers(plan: dict, clips: list[dict], starts: list[float], total: floa
         if t.get("type") in TREND_TX:
             d = min(float(t.get("duration", TREND_TX[t["type"]])), clips[i - 1]["_dur"], clips[i]["_dur"])
             lay = {k2: v for k2, v in t.items() if k2 not in ("type", "duration")}
-            if t["type"] == "spinwhip":  # 1 soft frame before the cut, 3 spinning + 4 settling after (measured)
+            if t["type"] in PY_TX:  # e.g. spinwhip: 1 soft frame before the cut, 3 spinning + 4 settling after (measured)
                 fps_ = int(plan.get("canvas", {}).get("fps", 30))
-                s0, e0 = starts[i] - 1 / fps_, starts[i] + 7 / fps_
+                nb, na = PY_TX[t["type"]]
+                s0, e0 = starts[i] - nb / fps_, starts[i] + na / fps_
             else:
                 s0, e0 = starts[i] - d / 2, starts[i] + d / 2
             whips.append({"type": t["type"], "start": max(0, s0), "end": min(total, e0),
