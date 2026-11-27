@@ -113,7 +113,8 @@ for g in GROUPS:
             words.append({"w": g[tier][0], "t": round(g[tier][1] - VO_IN - a, 3), "k": k})
     ov.append({"type": "motion", "comp": "WordStack", "start": round(a, 3), "end": round(g["end"] - VO_IN, 3),
                "props": {"words": words, "x": 0.5, "y": g.get("y", Y), "key_size": 230, "grad": g.get("grad", AQUA),
-                         "tilt": g.get("key_tilt", 0), "enter": "flicker", "max_w": 0.86}})
+                         "tilt": g.get("key_tilt", 0), "enter": "flicker", "max_w": 0.86,
+                         "font": "MON", "key_weight": 800}})
 
 plan = {
     "output": OUTPUT,

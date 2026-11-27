@@ -7,6 +7,7 @@
 | JASSUB (libass for the browser) | `editor/vendor/jassub/` | MIT (see `editor/vendor/jassub/COPYRIGHT`) |
 | Be Vietnam Pro (Lâm Bảo, Tony Le, ViệtAnh Nguyễn) | `assets/fonts/`, `motion/public/fonts/` | SIL Open Font License 1.1 — `assets/fonts/OFL.txt` |
 | Playfair Display (Claus Eggers Sørensen) | `assets/fonts/`, `motion/public/fonts/` | SIL Open Font License 1.1 — `assets/fonts/OFL.txt` |
+| Montserrat (Julieta Ulanovsky and the Montserrat Project Authors) | `assets/fonts/Montserrat-VF.ttf`, `motion/public/fonts/Montserrat-VF.ttf` | SIL Open Font License 1.1 — `assets/fonts/Montserrat-OFL.txt` |
 | faster-whisper, CTranslate2 (pip) | `scripts/transcribe.py` | MIT |
 | rembg (pip) + U²-Net model (downloaded on first use) | `scripts/vipfx.py`, `behind_text.py` | MIT / Apache-2.0 |
 | edge-tts (pip) | `scripts/tts.py` | LGPL-3.0 (used as a separate library) |

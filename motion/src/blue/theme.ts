@@ -9,6 +9,7 @@ const fonts: Array<[string, string, string, string]> = [
   ['BVP', 'fonts/BeVietnamPro-ExtraBold.ttf', '800', 'normal'],
   ['PFI', 'fonts/PlayfairDisplay-Italic-VF.ttf', '400 900', 'italic'],
   ['DSC', 'fonts/DancingScript-VF.ttf', '400 700', 'normal'],  // handwriting (OFL), Vietnamese
+  ['MON', 'fonts/Montserrat-VF.ttf', '100 900', 'normal'],      // geometric (OFL), full Vietnamese: the closest match to the listing editors' Poppins, which has no Vietnamese marks
   // optional user fonts (motion/public/fonts/local, git-ignored): geometric thin + bold for the WordStack lockups; missing files fall back to BVP
   ['GEO', 'fonts/local/nexa-light.ttf', '300', 'normal'],
   ['GEO', 'fonts/local/nexa-bold.ttf', '700', 'normal'],

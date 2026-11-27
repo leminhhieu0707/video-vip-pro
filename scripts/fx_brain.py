@@ -441,7 +441,7 @@ def duo_slots(out: list[dict], a: dict) -> list[dict]:
     for i, o in enumerate(out):
         p = o["props"]
         p.update({"enter": "flicker", "key_in": "strobe" if i % 2 == 0 else "pop", "tilt": -9 if i % 3 == 2 else 0,
-                  "y": y_top if i % 2 == 0 else y_low, "follow": 0.8, "max_w": min(p.get("max_w", 0.88), 0.78)})
+                  "y": y_top if i % 2 == 0 else y_low, "follow": 0.8, "font": "MON", "key_weight": 800, "max_w": min(p.get("max_w", 0.88), 0.78)})
         if i % 2 == 0:  # only the top slot tucks behind the head; behind the torso the key loses its middle letters
             o["behind"] = True
         else:

@@ -212,11 +212,12 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
  * the right); the key strobes on for 12 frames 60/100/18/0/70/73/0/0/35/40/0/0 % with a glow on the lit frames
  * (key_in 'strobe', default) or simply pops on in 1 frame (key_in 'pop'); the lockup leaves by drifting up 14 px and
  * fading in 4 frames, no blur. Use tilt 0 for an upright key; builders show two lockups at once, top and bottom slot).
+ * font 'MON' + key_weight 800 = the listing-editor type (Montserrat: Poppins-like, with Vietnamese); thin_weight 300.
  * follow true | 0..1: the lockup moves with the camera (zooms, drifts) so it sits IN the shot — render.py measures the
  * global motion of the footage and fills `cam` [[dx, dy, scale] per frame].
  */
 export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
-  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe', cam}) => {
+  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe', cam, key_weight = 700, thin_weight = 300}) => {
   const {frame, fps, t, W, H} = useT();
   const g = accent ? [accent, accent] : grad;
   const F = `${font}, BVP, sans-serif`;
@@ -252,7 +253,7 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
   };
   const small = (list: any[], size: number, dir: number) => list.map((wd: any, i: number) => {
     const e = enter(wd.t ?? 0, dir, false);
-    return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: 300, fontSize: size, lineHeight: 1, color: ink,
+    return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: thin_weight, fontSize: size, lineHeight: 1, color: ink,
       letterSpacing: `${0.02 + (1 - e.p) * 0.12}em`, textShadow: shadow, marginRight: i < list.length - 1 ? size * 0.22 : 0, ...e.style}}>{wd.w}</span>;
   });
   return <AbsoluteFill>
@@ -267,7 +268,7 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
         {key.map((wd: any, i: number) => {
           const e = enter(wd.t ?? 0, 0, true);
           const sw = lerp(t, (wd.t ?? 0) + 0.15, (wd.t ?? 0) + 0.75, -0.3, 1.3);
-          return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: 700, fontSize: K, lineHeight: 0.92,
+          return <span key={i} style={{display: 'inline-block', whiteSpace: 'pre', fontFamily: F, fontWeight: key_weight, fontSize: K, lineHeight: 0.92,
             letterSpacing: `${-0.03 + (1 - e.p) * 0.18}em`, padding: `${K * 0.16}px ${K * 0.06}px ${K * 0.22}px`, margin: `${-K * 0.16}px 0 ${-K * 0.22}px`,
             marginRight: i < key.length - 1 ? K * 0.12 : 0, // padded so the gradient (background-clip) also covers stacked marks above and the dot below (ộ, ệ, ặ)
             backgroundImage: `linear-gradient(100deg, rgba(255,255,255,0) ${sw * 100 - 14}%, rgba(255,255,255,0.85) ${sw * 100}%, rgba(255,255,255,0) ${sw * 100 + 14}%), linear-gradient(180deg, ${g[0]}, ${g[1]})`,
