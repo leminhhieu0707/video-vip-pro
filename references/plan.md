@@ -85,7 +85,7 @@ Clips play in order on the timeline. Each one is normalized to the canvas and ca
 ### Look & sound per clip (also settable once for all clips via top-level `"clip_defaults": {...}`)
 | key | meaning |
 |---|---|
-| `grade` | Color preset: `bright` (clean shops, products), `bds_net` (crisp real-estate B-roll: deep blacks, kept whites, ~+30 % colour), `vivid`, `warm`, `cool`, `cinematic` (teal/orange), `vintage`, `pastel`, `moody`, `bw`. It also takes a list of presets, or a dict `{"preset","brightness","contrast","saturation","gamma","temperature":K,"vibrance","lut":"x.cube"}`. |
+| `grade` | Color preset: `bright` (clean shops, products), `bds_net` (crisp real-estate B-roll: deep blacks, kept whites, ~+30 % colour), `net` (sharpen compressed phone / Facebook / Zalo footage; stackable), `vivid`, `warm`, `cool`, `cinematic` (teal/orange), `vintage`, `pastel`, `moody`, `bw`. It also takes a list of presets, or a dict `{"preset","brightness","contrast","saturation","gamma","temperature":K,"vibrance","lut":"x.cube"}`. |
 | `beauty` | Skin smoothing from 0 to 1. Use 0.5–0.7 for natural results. Only pixels with skin color are smoothed, with an edge-preserving filter, so eyes, hair, text and the background stay sharp. It adds about 1 s of render time per second of 1080p. |
 | `denoise` | `light` (hiss), `medium` (AC or room rumble plus a gate between words), or `strong` (wind or loud fans; can sound thin). Check with `showspectrumpic` before and after. |
 | `voice` | `true` gives clearer, punchier speech: it cuts mud, adds presence, compresses and de-esses. |

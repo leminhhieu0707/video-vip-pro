@@ -95,6 +95,9 @@ GRADES = {
     "moody": ["eq=brightness=-0.03:contrast=1.12:saturation=0.82", "colorbalance=bs=0.05:bh=-0.03"],
     # real-estate B-roll, crisp (measured from top US listing editors, toned down): blacks pressed deep, whites kept,
     # more contrast, colour only ~+30 % (theirs is +50..140 %, too loud for VN taste), barely warmer
+    # compressed phone / Facebook / Zalo footage: light temporal denoise, then contrast-adaptive sharpening (no halos);
+    # measured +60 % Laplacian sharpness on a 2 Mbps reel. Stack it: ["net", "bds_net"]
+    "net": ["hqdn3d=1.5:1.5:3:3", "cas=strength=0.6"],
     "bds_net": ["curves=all='0/0 0.05/0 0.25/0.21 0.5/0.5 0.75/0.79 1/1'", "eq=saturation=1.0:gamma=0.97",
                 "colorbalance=rm=0.01:bm=-0.015:rh=0.01:bh=-0.01"],
     "bw": ["hue=s=0", "eq=contrast=1.15"],
