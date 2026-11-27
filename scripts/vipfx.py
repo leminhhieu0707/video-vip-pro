@@ -849,7 +849,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
             # left of the split = new look, right = original; the split eases from `from` to `to`
             sp = f"({a}+({b}-{a})*(1-pow(1-min(1,max(0,(T-{s:.3f})/{dur:.3f})),2)))"
             fc.append(f"[fxa{k}]format=yuv420p[fxo{k}];[fxl{k}][fxo{k}]blend=all_expr='if(lt(X,W*{sp}),A,B)',"
-                      f"drawbox=x='iw*{sp}-2':y=0:w=4:h=ih:c=white@0.95:t=fill:replace=0,format=rgba[fxv{k}]")
+                      f"drawbox=x='iw*{sp.replace('T-', 't-')}-2':y=0:w=4:h=ih:c=white@0.95:t=fill:replace=0,format=rgba[fxv{k}]")  # drawbox time is t, blend's is T
         else:
             fc.append(f"{l}{look},format=rgba,{_fades(s, e, cx.total, float(o.get('fade', 0.2)))}[fxv{k}]")
         return _over(cx, vlast, f"[fxv{k}]", s, e, k, "f")
