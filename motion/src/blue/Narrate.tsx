@@ -207,12 +207,14 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
  * blur and a tracking squeeze, leaving with a blur lift. One overlay = one phrase; the builder makes them from the transcript.
  * Props: words [{w, t (s from overlay start), k (1 = key)}], x 0.5, y 0.5 (vertical centre of the lockup), key_size 170,
  * grad [c1, c2] (key fill), ink '#fff', max_w 0.88 (of the frame width), tilt -9 (° slant of the key), font 'GEO',
- * enter 'fly' (default: words fly in with motion blur) | 'flicker' (tour look: the key flickers on in 6 frames
- * 35/8/100/100/45/100 %, small words fade in over 3 frames, no travel — measured from top real-estate tour editors; use
- * tilt 0 for an upright key).
+ * enter 'fly' (default: words fly in with motion blur) | 'flicker' (listing-editor look, measured frame by frame: small
+ * words pop in grey and brighten in 4 frames while sliding ~18 px from their side (lead words from above, tail words from
+ * the right); the key strobes on for 12 frames 60/100/18/0/70/73/0/0/35/40/0/0 % with a glow on the lit frames
+ * (key_in 'strobe', default) or simply pops on in 1 frame (key_in 'pop'); the lockup leaves by drifting up 14 px and
+ * fading in 4 frames, no blur. Use tilt 0 for an upright key; builders show two lockups at once, top and bottom slot).
  */
 export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
-  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly'}) => {
+  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe'}) => {
   const {frame, fps, t, W, H} = useT();
   const g = accent ? [accent, accent] : grad;
   const F = `${font}, BVP, sans-serif`;
@@ -223,15 +225,23 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
   const K = Math.min(key_size, (W * max_w) / Math.max(1, ktxt.length * 0.6));     // fit the key line to the frame
   const preS = Math.min(K * 0.6, (W * max_w) / Math.max(1, pre.map((q: any) => q.w).join(' ').length * 0.5));
   const postS = Math.min(K * 0.42, (W * max_w) / Math.max(1, post.map((q: any) => q.w).join(' ').length * 0.5));
-  const out = lerp(t, duration - 0.18, duration, 0, 1);
+  const out = mode === 'flicker' ? lerp(t, duration - 4 / fps, duration, 0, 1) : lerp(t, duration - 0.18, duration, 0, 1);
   const shadow = '0 6px 26px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.35)';
-  const FLICK = [0.35, 0.08, 1, 1, 0.45, 1];
+  const STROBE = [0.6, 1, 0.18, 0, 0.7, 0.73, 0, 0, 0.35, 0.4, 0, 0];
   const enter = (st: number, dir: number, heavy: boolean) => {
     if (mode === 'flicker') {
       const k = Math.floor((t - st) * fps + 1e-3);
-      const op = k < 0 ? 0 : heavy ? (k < FLICK.length ? FLICK[k] : 1) : Math.min(1, (k + 1) / 3);
-      return {p: k < 0 ? 0 : 1, style: {opacity: op * (1 - out), filter: `blur(${(out * 10).toFixed(2)}px)`,
-        transform: `translate(0px, ${-out * 30}px)`} as React.CSSProperties};
+      let op = 0, glow = 0, dx = 0, dy = 0;
+      if (k >= 0 && heavy) {
+        op = key_in === 'pop' || k >= STROBE.length ? 1 : STROBE[k];
+        glow = key_in === 'pop' || k >= STROBE.length ? 0 : STROBE[k];
+      } else if (k >= 0) {
+        const p = Math.min(1, (k + 1) / 4), e = 1 - Math.pow(1 - p, 2);
+        op = 0.35 + 0.65 * e;
+        if (dir < 0) dy = -18 * (1 - e); else if (dir > 0) dx = 24 * (1 - e);
+      }
+      return {p: k < 0 ? 0 : 1, style: {opacity: op * (1 - out), filter: glow ? `brightness(${(1 + 0.45 * glow).toFixed(2)}) drop-shadow(0 0 ${(16 * glow).toFixed(1)}px ${g[0]})` : '',
+        transform: `translate(${dx}px, ${dy - out * 14}px)`} as React.CSSProperties};
     }
     const p = lerp(t, st - 0.02, st + (heavy ? 0.26 : 0.2), 0, 1, (q) => 1 - Math.pow(1 - q, 3));
     const b = (1 - p) * (heavy ? 16 : 12) + out * 10;

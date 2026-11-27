@@ -431,6 +431,25 @@ def wordpop(sents: list[dict], infos: list[dict], picks: dict, a: dict, theme: s
     return out
 
 
+def duo_slots(out: list[dict], a: dict) -> list[dict]:
+    """--wordpop-look duo (the listing-editor look, measured frame by frame): two lockups on screen at once, alternating a
+    top slot (key crossing the head, tucked behind it) and a low slot (in front of the chest); each lockup stays until the
+    next one in its own slot arrives. Words pop in grey and brighten, keys strobe on (every other one just pops)."""
+    head = a["person"][1]
+    y_top, y_low = round(max(0.18, min(0.6, head - 0.01)), 3), round(min(0.74, head + 0.22), 3)
+    for i, o in enumerate(out):
+        p = o["props"]
+        p.update({"enter": "flicker", "key_in": "strobe" if i % 2 == 0 else "pop", "tilt": -9 if i % 3 == 2 else 0,
+                  "y": y_top if i % 2 == 0 else y_low})
+        if i % 2 == 0:  # only the top slot tucks behind the head; behind the torso the key loses its middle letters
+            o["behind"] = True
+        else:
+            o.pop("behind", None)
+        nxt = out[i + 2]["start"] - 0.03 if i + 2 < len(out) else o["end"] + 0.8
+        o["end"] = round(max(o["end"], min(nxt, o["end"] + 1.6)), 3)
+    return out
+
+
 def word_time(sent: dict, phrase: str) -> float:
     """Timeline time of the first word of `phrase` inside the sentence (effects land on the word that names them)."""
     if not phrase or not sent["words"]:
@@ -921,6 +940,8 @@ def decide(ar: dict, words: list[dict], a: dict, opt) -> dict:
     mode = wp_mode
     if mode == "wordpop":
         wpop = wordpop(sents, infos, picks, a, theme)
+        if getattr(opt, "wordpop_look", "stack") == "duo":
+            wpop = duo_slots(wpop, a)
     else:
         for s, info in zip(sents, infos):
             if picks.get(s["i"], {}).get("name") in ("HudChapter", "NeonTunnel", "ExplainCanvas"):  # full-screen graphics carry their own words
@@ -998,6 +1019,9 @@ def main():
     ap.add_argument("--hud", default="auto", choices=["auto", "off"], help="full-screen HUD chapter on a process list (off = never)")
     ap.add_argument("--captions", default="auto", choices=["auto", "wordpop", "blue"],
                     help="auto = one look per video, varied between videos; wordpop = WordStack word-by-word lockups; blue = two-tier BlueText")
+    ap.add_argument("--wordpop-look", default="stack", choices=["stack", "duo"],
+                    help="stack = one lockup at a time, words fly in (default); duo = listing-editor look: two lockups at once "
+                         "(top / low slot), grey pop-in, strobing keys, drift-up exit")
     ap.add_argument("--seed", type=int, default=0, help="change it to get a different but equally valid pick")
     ap.add_argument("-o", "--out", default=None)
     ap.add_argument("--plan", default=None, help="also write a complete plan_vip.json")
