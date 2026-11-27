@@ -93,6 +93,10 @@ GRADES = {
     "food": ["colorbalance=rm=0.03:bm=-0.03:rh=0.02:bh=-0.02", "eq=contrast=1.07:gamma=0.98:saturation=1.04",
              "vibrance=intensity=0.18", "unsharp=5:5:0.45:5:5:0", "vignette=angle=PI/7"],
     "moody": ["eq=brightness=-0.03:contrast=1.12:saturation=0.82", "colorbalance=bs=0.05:bh=-0.03"],
+    # real-estate B-roll, crisp (measured from top US listing editors, toned down): blacks pressed deep, whites kept,
+    # more contrast, colour only ~+30 % (theirs is +50..140 %, too loud for VN taste), barely warmer
+    "bds_net": ["curves=all='0/0 0.05/0 0.25/0.21 0.5/0.5 0.75/0.79 1/1'", "eq=saturation=1.0:gamma=0.97",
+                "colorbalance=rm=0.01:bm=-0.015:rh=0.01:bh=-0.01"],
     "bw": ["hue=s=0", "eq=contrast=1.15"],
 }
 
@@ -155,6 +159,10 @@ RAMPS = {
     "hero": [(0, 1.0), (0.3, 1.0), (0.4, 0.3), (0.78, 0.3), (0.88, 1.8), (1, 1.8)],         # normal - slow-mo - out
     "rush_in": [(0, 3.0), (0.35, 3.0), (0.5, 0.45), (1, 0.45)],                               # rush in, land slow
     "slowmo_end": [(0, 1.0), (0.55, 1.0), (0.68, 0.35), (1, 0.35)],                           # ends in slow motion
+    # walkthrough tour pair (measured: push speeds up ~4x into the cut, the next shot lands still moving, then eases):
+    # clip A "ramp": "push_out" + "zoom": "in", "zoom_ease": "in"; clip B "ramp": "push_in" + "zoom_ease": "out"
+    "push_out": [(0, 1.0), (0.35, 1.1), (0.75, 2.4), (1, 4.2)],
+    "push_in": [(0, 3.2), (0.3, 1.8), (0.6, 1.1), (1, 1.0)],
 }
 
 
@@ -189,7 +197,7 @@ def ramp_map(spec, src_len: float, steps: int = 24) -> tuple[str, float, list[tu
 
 
 # ------------------------------------------------------------------ STUDIO LOOK: colour match between clips
-TREND_TX = {"whip": 0.36, "glitch": 0.24, "leak": 0.7, "zoomthru": 0.5}
+TREND_TX = {"whip": 0.36, "glitch": 0.24, "leak": 0.7, "zoomthru": 0.5, "spinwhip": 0.27}
 
 
 def _seg_stats(f: Path) -> dict | None:
@@ -322,7 +330,11 @@ def make_segment(c: dict, i: int, canvas: dict, work: Path, vcodec: list[str]) -
         if slow:
             z = c.get("zoom", "in")
             amt = float(c.get("zoom_amount", 0.12 if is_img else 0.08))
-            zexpr = f"1+{amt}*on/{frames}" if z == "in" else f"1+{amt}-{amt}*on/{frames}"
+            # zoom_ease: "in" speeds up (a push that accelerates into the cut), "out" lands softly; default linear
+            ze = c.get("zoom_ease")
+            u = f"(on/{frames})"
+            prog = f"pow({u},2)" if ze == "in" else (f"(1-pow(1-{u},3))" if ze == "out" else u)
+            zexpr = f"1+{amt}*{prog}" if z == "in" else f"1+{amt}-{amt}*{prog}"
         # keyframed punch zooms (CapCut-style "zoom in on the keyword"): ease in, hold, ease out.
         # zoompan runs before the speed change, so clip-relative output times are scaled back to source time
         fx, fy = focus, 0.4
@@ -1196,7 +1208,12 @@ def trend_layers(plan: dict, clips: list[dict], starts: list[float], total: floa
         if t.get("type") in TREND_TX:
             d = min(float(t.get("duration", TREND_TX[t["type"]])), clips[i - 1]["_dur"], clips[i]["_dur"])
             lay = {k2: v for k2, v in t.items() if k2 not in ("type", "duration")}
-            whips.append({"type": t["type"], "start": max(0, starts[i] - d / 2), "end": min(total, starts[i] + d / 2),
+            if t["type"] == "spinwhip":  # 1 soft frame before the cut, 3 spinning + 4 settling after (measured)
+                fps_ = int(plan.get("canvas", {}).get("fps", 30))
+                s0, e0 = starts[i] - 1 / fps_, starts[i] + 7 / fps_
+            else:
+                s0, e0 = starts[i] - d / 2, starts[i] + d / 2
+            whips.append({"type": t["type"], "start": max(0, s0), "end": min(total, e0),
                           "_at": starts[i], "dir": t.get("dir", "left"), **lay})
     ovs[:0] = whips
     for j in range(len(ovs) - 1, -1, -1):  # FocusText: the video starts soft and pulls into focus at "swap"

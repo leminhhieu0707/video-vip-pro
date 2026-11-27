@@ -73,19 +73,19 @@ Clips play in order on the timeline. Each one is normalized to the canvas and ca
 | `color` | `brightness` (−1…1, ~0.03), `contrast` (~1.05–1.15), `saturation` (~1.1–1.25), `gamma`. |
 | `flip` | Mirrors the clip horizontally. |
 | `punch` | A static punch-in on video, such as 1.15. It crops toward `focus`. Alternate it between jump cuts. |
-| `zoom` on video | `in` or `out` gives a slow push across the clip (`zoom_amount` defaults to 0.08). |
+| `zoom` on video | `in` or `out` gives a slow push across the clip (`zoom_amount` defaults to 0.08). `zoom_ease`: `"in"` accelerates (a push into the cut), `"out"` lands softly; default linear. |
 | `zooms` | Keyframed **punch zooms** on the keyword (CapCut style): `[{"at": 2.3, "to": 1.25, "in": 0.16, "hold": 0.9, "out": 0.3, "x": 0.5, "y": 0.4}]`. `at` is clip-relative (use the keyword's start from the transcript), `out: null` stays zoomed to the end of the clip. Use 1.15–1.25 for emphasis and 1.3–1.4 for the price/biggest number. |
 | `shake` | Short camera shake on an impact moment: `{"at": 4.5, "dur": 0.3, "amp": 12}` (clip-relative). Pair it with `bass_hit` or `vine_boom`. |
-| `transition` | How this clip enters from the previous one. It is either a string or `{"type","duration"}`. The default is a hard cut. The types are the ffmpeg xfade names: `fade`, `fadeblack`, `fadewhite`, `dissolve`, `slideleft/right/up/down`, `smoothleft/right/up/down`, `wipeleft/right/up/down`, `circleopen`, `circleclose`, `radial`, `zoomin`, `pixelize`, `hblur`, `coverleft`, `revealleft`, `fadegrays`, and others. A transition overlaps the two clips, so the timeline gets shorter by its duration. `"whip"`, `"glitch"`, `"leak"`, `"zoomthru"` (or `{"type":"whip","dir":"right","duration":0.36}`) are the exception: a whip pan drawn over a hard cut, no overlap. |
+| `transition` | How this clip enters from the previous one. It is either a string or `{"type","duration"}`. The default is a hard cut. The types are the ffmpeg xfade names: `fade`, `fadeblack`, `fadewhite`, `dissolve`, `slideleft/right/up/down`, `smoothleft/right/up/down`, `wipeleft/right/up/down`, `circleopen`, `circleclose`, `radial`, `zoomin`, `pixelize`, `hblur`, `coverleft`, `revealleft`, `fadegrays`, and others. A transition overlaps the two clips, so the timeline gets shorter by its duration. `"whip"`, `"glitch"`, `"leak"`, `"zoomthru"`, `"spinwhip"` (rotating whip, 1 frame before + 7 after the cut) (or `{"type":"whip","dir":"right","duration":0.36}`) are the exception: a whip pan drawn over a hard cut, no overlap. |
 | `parallax` | Image clips only: `true` or `{"amount","dir"}` makes a 2.5D "3D photo" (subject and background drift apart). |
-| `ramp` | Speed ramp for B-roll: `"velocity"`, `"hero"`, `"rush_in"`, `"slowmo_end"` or `[[fraction, speed], …]`. Replaces `speed`, mutes the clip, adds motion blur on fast parts; the clip length follows from the curve. |
+| `ramp` | Speed ramp for B-roll: `"velocity"`, `"hero"`, `"rush_in"`, `"slowmo_end"`, `"push_out"` / `"push_in"` (the walkthrough push pair: speeds up to ~4x into the cut / lands fast and eases) or `[[fraction, speed], …]`. Replaces `speed`, mutes the clip, adds motion blur on fast parts; the clip length follows from the curve. |
 
 `render.py` prints the **clip start times on the final timeline**, which tells you where each clip landed.
 
 ### Look & sound per clip (also settable once for all clips via top-level `"clip_defaults": {...}`)
 | key | meaning |
 |---|---|
-| `grade` | Color preset: `bright` (clean shops, products), `vivid`, `warm`, `cool`, `cinematic` (teal/orange), `vintage`, `pastel`, `moody`, `bw`. It also takes a list of presets, or a dict `{"preset","brightness","contrast","saturation","gamma","temperature":K,"vibrance","lut":"x.cube"}`. |
+| `grade` | Color preset: `bright` (clean shops, products), `bds_net` (crisp real-estate B-roll: deep blacks, kept whites, ~+30 % colour), `vivid`, `warm`, `cool`, `cinematic` (teal/orange), `vintage`, `pastel`, `moody`, `bw`. It also takes a list of presets, or a dict `{"preset","brightness","contrast","saturation","gamma","temperature":K,"vibrance","lut":"x.cube"}`. |
 | `beauty` | Skin smoothing from 0 to 1. Use 0.5–0.7 for natural results. Only pixels with skin color are smoothed, with an edge-preserving filter, so eyes, hair, text and the background stay sharp. It adds about 1 s of render time per second of 1080p. |
 | `denoise` | `light` (hiss), `medium` (AC or room rumble plus a gate between words), or `strong` (wind or loud fans; can sound thin). Check with `showspectrumpic` before and after. |
 | `voice` | `true` gives clearer, punchier speech: it cuts mud, adds presence, compresses and de-esses. |

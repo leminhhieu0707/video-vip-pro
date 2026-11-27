@@ -206,10 +206,13 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
  * each other and staggered (lead words hang left, tail words hang right), each word flying in on its syllable with motion
  * blur and a tracking squeeze, leaving with a blur lift. One overlay = one phrase; the builder makes them from the transcript.
  * Props: words [{w, t (s from overlay start), k (1 = key)}], x 0.5, y 0.5 (vertical centre of the lockup), key_size 170,
- * grad [c1, c2] (key fill), ink '#fff', max_w 0.88 (of the frame width), tilt -9 (° slant of the key), font 'GEO'.
+ * grad [c1, c2] (key fill), ink '#fff', max_w 0.88 (of the frame width), tilt -9 (° slant of the key), font 'GEO',
+ * enter 'fly' (default: words fly in with motion blur) | 'flicker' (tour look: the key flickers on in 6 frames
+ * 35/8/100/100/45/100 %, small words fade in over 3 frames, no travel — measured from top real-estate tour editors; use
+ * tilt 0 for an upright key).
  */
 export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
-  max_w = 0.88, tilt = -9, font = 'GEO', accent}) => {
+  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly'}) => {
   const {frame, fps, t, W, H} = useT();
   const g = accent ? [accent, accent] : grad;
   const F = `${font}, BVP, sans-serif`;
@@ -222,7 +225,14 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
   const postS = Math.min(K * 0.42, (W * max_w) / Math.max(1, post.map((q: any) => q.w).join(' ').length * 0.5));
   const out = lerp(t, duration - 0.18, duration, 0, 1);
   const shadow = '0 6px 26px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.35)';
+  const FLICK = [0.35, 0.08, 1, 1, 0.45, 1];
   const enter = (st: number, dir: number, heavy: boolean) => {
+    if (mode === 'flicker') {
+      const k = Math.floor((t - st) * fps + 1e-3);
+      const op = k < 0 ? 0 : heavy ? (k < FLICK.length ? FLICK[k] : 1) : Math.min(1, (k + 1) / 3);
+      return {p: k < 0 ? 0 : 1, style: {opacity: op * (1 - out), filter: `blur(${(out * 10).toFixed(2)}px)`,
+        transform: `translate(0px, ${-out * 30}px)`} as React.CSSProperties};
+    }
     const p = lerp(t, st - 0.02, st + (heavy ? 0.26 : 0.2), 0, 1, (q) => 1 - Math.pow(1 - q, 3));
     const b = (1 - p) * (heavy ? 16 : 12) + out * 10;
     return {p, style: {opacity: Math.min(1, p * 1.8) * (1 - out), filter: `blur(${b.toFixed(2)}px)`,

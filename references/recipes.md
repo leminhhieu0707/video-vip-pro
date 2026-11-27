@@ -33,6 +33,14 @@ Pick the recipe closest to the request and adapt it. They are starting points, n
 - Exterior photos: `zoom: "in"` at 0.08–0.12. Interior: `zoom: "out"`. Keep color grades subtle (`saturation` 1.1, `contrast` 1.05).
 - Contact card at the end: an agent photo as `image` with `radius`, plus name and phone as `text`.
 
+### B2. Walkthrough tour, listing-editor look (`templates/build_tour.py`)
+Measured frame by frame from top US listing editors (6 shorts, ~6,200 frames), then toned down for Vietnamese taste. One phone walkthrough clip + a voice-over is enough.
+- **Rhythm:** B-roll shots 0.9–1.7 s, cut on the **words**, not on the music beat (only 2–4 cuts per video land on a beat). About 80 % hard cuts.
+- **Expensive moves, 2–3 per video only:** `push` (the shot speeds up to ~4x and pushes in faster and faster, the next shot lands still moving: ramp `push_out` → `push_in` + `zoom_ease`), `spin` (transition `spinwhip`: 1 soft frame, 3 spinning frames, 4 settling), `dissolve` 2 frames between two calm shots, `punch` 1.3x in 9 frames aimed at the object the voice names (`zooms` with `x`, `y`).
+- **Captions:** three-tier `WordStack` lockups with `"enter": "flicker"` (key flickers on in 6 frames), hairline words above, small tail words below, key upright (`tilt` 0) or slanted (−9) for emphasis words. Aqua `#16EFFD` / lime `#E3E655` by default, the brand colour when there is one. Keep lockups over calm wall or floor, never over a bright window.
+- **Grade:** `bds_net` (blacks pressed deep, whites kept, ~+30 % colour). The source editors push colour +50…140 %, too loud here.
+- **Sound:** a whoosh only on `push` and `spin`; every other cut stays silent. Voice on top, music ducked.
+
 ## C. Talking head: news commentary, tips, storytelling
 - `transcribe` → proofread → `cut_silence` (`--min-gap 0.3`). Remove retakes and false starts with `--remove a-b`. Find them by reading the transcript for repeated sentences.
 - Subtitles carry this genre: `tiktok` or `news` style, 3–4 words per line, `keywords` for names and numbers.

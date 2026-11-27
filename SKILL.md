@@ -19,6 +19,7 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
 | starting the builder | run `scripts/fx_brain.py` (edit brain), then copy `templates/build_vip.py` |
 | real estate: a project, a plot, a house (map, location, distances, floor plan, 3D block) | `references/style.md` → "ESTATE pack", then `scripts/geo.py build` for the satellite map and `scripts/floorplan.py` when the user sends a drawing (bản vẽ / mặt bằng) |
 | real-estate footage (flycam, GES renders): plot / labels glued to the ground, sky, text behind buildings, day → night, masking transition | `references/style.md` → "ESTATE pro pack" (`scripts/footage.py`, `scripts/ges.py`) |
+| a walkthrough clip (phone tour of a house / apartment) + voice-over, cut like the top listing editors | `references/recipes.md` → "B2. Walkthrough tour", copy `templates/build_tour.py` |
 | a plot / land lot / project site as the hero shot (B&W world, slab lift, info sheet) | `references/style.md` → "PlotSpotlight" |
 | a talking head that explains things (lists, steps, before/after, "people search for…") | `references/style.md` → "NARRATE pack" (`ExplainCanvas`, the speaker stays in a live bubble) |
 
