@@ -831,6 +831,95 @@ def track_box(base: Path, s: float, e: float, spec: dict, fps: int, work: Path) 
     return pts
 
 
+def cam_track(base: Path, s: float, e: float, anchor: tuple[float, float], fps: int, work: Path, amount: float = 1.0) -> list[list[float]]:
+    """Camera follow for text that should sit IN the shot (listing-editor look: when the shot zooms or drifts, the words
+    go with it). Measures the global motion of base.mp4[s, e] frame to frame (features + RANSAC similarity, so a gesturing
+    speaker does not drag it) and chains it from the first frame. Returns per frame [dx, dy, scale]: how far the anchor
+    point (frame fractions) has moved and how much the picture has grown. amount < 1 follows only part of the motion."""
+    import cv2
+    import subprocess
+    import numpy as np
+    key = hashlib.md5(json.dumps([str(base), base.stat().st_mtime_ns, s, e, anchor, fps, amount, 2]).encode()).hexdigest()[:10]
+    cache = work / "track" / f"cam_{key}.json"
+    if cache.exists():
+        return json.loads(cache.read_text())
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    w, h = 270, 480
+    r = subprocess.run([FFMPEG, "-v", "error", "-ss", f"{s:.3f}", "-t", f"{e - s:.3f}", "-i", str(base), "-vf", f"fps={fps},scale={w}:{h}",
+                        "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True)
+    frames = np.frombuffer(r.stdout, np.uint8)[: (len(r.stdout) // (w * h)) * w * h].reshape(-1, h, w)
+    C = np.eye(3)
+    ax, ay = anchor[0] * w, anchor[1] * h
+    out, prev = [], None
+    for f in frames:
+        if prev is not None:
+            pts = cv2.goodFeaturesToTrack(prev, 400, 0.01, 6)
+            M = None
+            if pts is not None and len(pts) > 12:
+                nxt, st, _ = cv2.calcOpticalFlowPyrLK(prev, f, pts, None, winSize=(21, 21), maxLevel=3)
+                ok = st.ravel() == 1
+                if ok.sum() > 12:
+                    M, _ = cv2.estimateAffinePartial2D(pts[ok], nxt[ok], method=cv2.RANSAC, ransacReprojThreshold=1.5)
+            if M is not None and abs(np.hypot(M[0, 0], M[1, 0]) - 1) < 0.25:  # a cut or a bad fit: hold
+                C = np.vstack([M, [0, 0, 1]]) @ C
+        prev = f
+        px, py, _ = C @ np.array([ax, ay, 1.0])
+        sc = float(np.hypot(C[0, 0], C[1, 0]))
+        out.append([round(float(px - ax) / w * amount, 4), round(float(py - ay) / h * amount, 4), round(1 + (sc - 1) * amount, 4)])
+    cache.write_text(json.dumps(out))
+    print(f"[render] camera follow over {len(out)} frames (scale {min(o[2] for o in out):.2f}–{max(o[2] for o in out):.2f})")
+    return out
+
+
+def zoom_follow(clips: list[dict], starts: list[float], s: float, e: float, anchor: tuple[float, float], fps: int,
+                amount: float = 1.0) -> list[list[float]] | None:
+    """Exact camera follow when the motion is the edit's own digital zoom (clip "zoom" / "zooms"): re-evaluates the same
+    zoom curve make_segment gives zoompan, frame by frame, so even a 5-frame blurred punch is followed exactly. None when
+    no clip in [s, e] zooms digitally (then cam_track measures the real camera)."""
+    def z_at(c, ts):  # zoom + focus of clip c at clip-relative output time ts (mirrors make_segment)
+        sp = float(c.get("speed", 1.0))
+        dur = (parse_time(c["out"]) - parse_time(c.get("in", 0))) / sp if "out" in c else 1e9
+        frames = max(1, dur * sp * fps)
+        on = ts * sp * fps
+        z, fx, fy = 1.0, float(c.get("focus", 0.5)), 0.4
+        if c.get("zoom") in ("in", "out"):
+            amt = float(c.get("zoom_amount", 0.08))
+            u = min(1.0, on / frames)
+            ze = c.get("zoom_ease")
+            pr = u * u if ze == "in" else (1 - (1 - u) ** 3 if ze == "out" else u)
+            z = 1 + amt * pr if c["zoom"] == "in" else 1 + amt - amt * pr
+        sm = lambda q: q * q * (3 - 2 * q)  # noqa: E731
+        for k in c.get("zooms") or []:
+            a = parse_time(k.get("at", 0)) * sp
+            amt = float(k.get("to", 1.25)) - 1
+            din = max(0.04, float(k.get("in", 0.18)) * sp)
+            hold = float(k.get("hold", 1.2)) * sp
+            fx, fy = float(k.get("x", fx)), float(k.get("y", fy))
+            tt = on / fps
+            env = sm(min(1, max(0, (tt - a) / din)))
+            if k.get("out", 0.25) is not None:
+                b, dd = a + din + hold, max(0.04, float(k.get("out", 0.25)) * sp)
+                env *= 1 - sm(min(1, max(0, (tt - b) / dd)))
+            z += amt * env
+        return z, fx, fy
+
+    idx = [i for i, c in enumerate(clips) if starts[i] < e and (starts[i + 1] if i + 1 < len(starts) else 1e9) > s]
+    if not any((clips[i].get("zooms") or clips[i].get("zoom") in ("in", "out")) and not clips[i].get("ramp") for i in idx):
+        return None
+    out, ref = [], None
+    for n in range(max(1, int(round((e - s) * fps)))):
+        T = s + n / fps
+        i = max(j for j in idx if starts[j] <= T + 1e-6) if any(starts[j] <= T + 1e-6 for j in idx) else idx[0]
+        z, fx, fy = z_at(clips[i], T - starts[i])
+        if ref is None or ref[3] != i:  # a new clip: the text keeps its place, follows from here
+            ref = (z, (anchor[0] + (z - 1) * fx) / z, (anchor[1] + (z - 1) * fy) / z, i, out[-1] if out else [0, 0, 1])
+        z0, ux, uy, _, base = ref
+        px, py = z * ux - (z - 1) * fx, z * uy - (z - 1) * fy
+        dx, dy, sc = (px - anchor[0]) * amount, (py - anchor[1]) * amount, 1 + (z / z0 - 1) * amount
+        out.append([round(base[0] + dx, 4), round(base[1] + dy, 4), round(base[2] * sc, 4)])
+    return out
+
+
 def music_beats(plan: dict, s: float, e: float, work: Path) -> list[float]:
     """Beat times (seconds from s) of the plan's music inside [s, e], via scripts/beats.py."""
     import subprocess
@@ -926,6 +1015,14 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
         if o.get("comp") == "TrackLabel" and isinstance(o["props"].get("track"), dict):
             s, e = overlay_times(o, starts, total)
             o["props"]["track"] = track_box(work / "base.mp4", s, e, o["props"]["track"], int(canvas.get("fps", 30)), work)
+        if o.get("comp") == "WordStack" and o["props"].get("follow") and not o["props"].get("cam"):
+            s, e = overlay_times(o, starts, total)
+            fl = o["props"]["follow"]
+            amt = float(fl) if not isinstance(fl, bool) else 1.0
+            anc = (float(o["props"].get("x", 0.5)), float(o["props"].get("y", 0.5)))
+            fps_ = int(canvas.get("fps", 30))
+            o["props"]["cam"] = (zoom_follow(plan["clips"], starts, s, e, anc, fps_, amt)
+                                 or cam_track(work / "base.mp4", s, e, anc, fps_, work, amt))
         if o.get("comp") in SRC_COMPS and not o["props"].get("src"):  # comps that redraw the footage themselves (B&W outside, live face bubble)
             s, e = overlay_times(o, starts, total)
             kb = f"{(work / 'base.mp4').stat().st_mtime_ns}|{s:.3f}|{e:.3f}".encode()

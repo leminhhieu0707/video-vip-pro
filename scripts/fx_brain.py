@@ -434,13 +434,14 @@ def wordpop(sents: list[dict], infos: list[dict], picks: dict, a: dict, theme: s
 def duo_slots(out: list[dict], a: dict) -> list[dict]:
     """--wordpop-look duo (the listing-editor look, measured frame by frame): two lockups on screen at once, alternating a
     top slot (key crossing the head, tucked behind it) and a low slot (in front of the chest); each lockup stays until the
-    next one in its own slot arrives. Words pop in grey and brighten, keys strobe on (every other one just pops)."""
+    next one in its own slot arrives. Words pop in grey and brighten, keys strobe on (every other one just pops), and the
+    lockups move with the camera ("follow": the punch zooms carry the words, so they sit in the shot)."""
     head = a["person"][1]
     y_top, y_low = round(max(0.18, min(0.6, head - 0.01)), 3), round(min(0.74, head + 0.22), 3)
     for i, o in enumerate(out):
         p = o["props"]
         p.update({"enter": "flicker", "key_in": "strobe" if i % 2 == 0 else "pop", "tilt": -9 if i % 3 == 2 else 0,
-                  "y": y_top if i % 2 == 0 else y_low})
+                  "y": y_top if i % 2 == 0 else y_low, "follow": 0.8, "max_w": min(p.get("max_w", 0.88), 0.78)})
         if i % 2 == 0:  # only the top slot tucks behind the head; behind the torso the key loses its middle letters
             o["behind"] = True
         else:

@@ -212,9 +212,11 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
  * the right); the key strobes on for 12 frames 60/100/18/0/70/73/0/0/35/40/0/0 % with a glow on the lit frames
  * (key_in 'strobe', default) or simply pops on in 1 frame (key_in 'pop'); the lockup leaves by drifting up 14 px and
  * fading in 4 frames, no blur. Use tilt 0 for an upright key; builders show two lockups at once, top and bottom slot).
+ * follow true | 0..1: the lockup moves with the camera (zooms, drifts) so it sits IN the shot — render.py measures the
+ * global motion of the footage and fills `cam` [[dx, dy, scale] per frame].
  */
 export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
-  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe'}) => {
+  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe', cam}) => {
   const {frame, fps, t, W, H} = useT();
   const g = accent ? [accent, accent] : grad;
   const F = `${font}, BVP, sans-serif`;
@@ -254,7 +256,11 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
       letterSpacing: `${0.02 + (1 - e.p) * 0.12}em`, textShadow: shadow, marginRight: i < list.length - 1 ? size * 0.22 : 0, ...e.style}}>{wd.w}</span>;
   });
   return <AbsoluteFill>
-    <div style={{position: 'absolute', left: x * W, top: y * H, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'stretch'}}>
+    <div style={{position: 'absolute', left: x * W, top: y * H, display: 'flex', flexDirection: 'column', alignItems: 'stretch',
+      transform: (() => {
+        const c = Array.isArray(cam) && cam.length ? cam[Math.min(cam.length - 1, Math.max(0, frame))] : null;
+        return c ? `translate(${(c[0] * W).toFixed(1)}px, ${(c[1] * H).toFixed(1)}px) translate(-50%, -50%) scale(${c[2]})` : 'translate(-50%, -50%)';
+      })()}}>
       {pre.length ? <div style={{display: 'flex', justifyContent: has ? 'flex-start' : 'center', paddingLeft: has ? K * 0.08 : 0, marginBottom: has ? -K * 0.12 : 0,
         position: 'relative', zIndex: 1}}>{small(pre, has ? preS : K * 0.62, -1)}</div> : null}
       {has ? <div style={{display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2}}>
