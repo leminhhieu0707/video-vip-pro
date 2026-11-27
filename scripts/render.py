@@ -1163,6 +1163,7 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
     # image / video overlays (logos, stickers, picture-in-picture, green-screen effects)
     import vipfx
     cx = vipfx.Ctx(base, work, W, H, int(fps_c), starts, total, inputs, fc, n)
+    cx.cm = cm or ""
     cx.prepare(plan.get("overlays", []))
     for k, o in enumerate(plan.get("overlays", [])):
         if o.get("type") == "frost":
@@ -1353,9 +1354,10 @@ def final_pass(plan: dict, base: Path, starts: list[float], total: float, canvas
     if preview:
         trim = ["-ss", f"{preview[0]:.3f}", "-to", f"{min(preview[1], total):.3f}"]
     out.parent.mkdir(parents=True, exist_ok=True)
-    run([FFMPEG, "-y", *inputs, "-/filter_complex", "final.fc", "-map", "[vout]", "-map", "[aout]",
-         *trim, *vcodec, "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
-         str(out.resolve())], cwd=work)
+    cmd = [FFMPEG, "-y", *inputs, "-/filter_complex", "final.fc", "-map", "[vout]", "-map", "[aout]",
+           *trim, *vcodec, "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out.resolve())]
+    (work / "final_cmd.json").write_text(json.dumps([str(c) for c in cmd], ensure_ascii=False), encoding="utf-8")  # rerun / profile
+    run(cmd, cwd=work)
 
 
 # ------------------------------------------------------------------ main

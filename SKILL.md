@@ -120,4 +120,5 @@ Scripts live in `scripts/` next to this file. Run them as `python -X utf8 <skill
 - **Wrong person in the matte (a logo or poster on the wall):** use `popout` `"head": [x, w]` to limit the column that may break out, or pick a calmer moment.
 - **Sound drifts after cuts:** never join many talking clips segment by segment. Always go through `aroll.py`.
 - **"sound effect not found":** recipe names map to built-in sounds (see `SFX_ALIASES` in `render.py`). Drop your own `name.mp3` into `assets/sfx/` to override one.
+- **The final pass crawls or stalls (minutes per second of video):** a layer that cuts a LATE window out of the live stream (`cx.cut` on a split) makes ffmpeg hold every earlier frame in memory. Layers built from the base file use `cx.base_cut` (whip, glitch, zoomthru, and the Python transitions do). The exact command is saved in `<plan>_work/final_cmd.json` for profiling.
 - **An effect the scripts can't do:** render it with a direct ffmpeg command, or write a new comp in `motion/src/blue/` with colours wrapped in `T('…')`, then use it in the plan.

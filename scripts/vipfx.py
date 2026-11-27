@@ -190,10 +190,22 @@ class Ctx:
                 s0, e0 = a, b
                 break
         p = make_matte(self.base, s0, e0, self.W, self.H, self.fps, self.work)
-        i = self.add_input(["-i", str(p)])
+        # seek + trim BEFORE the full-size scale / blur: a shared matte can span many effects, and scaling the whole
+        # span for every layer that reads it was pure waste
+        i = self.add_input(["-ss", f"{max(0.0, s - s0):.3f}", "-t", f"{e - s + 0.2:.3f}", "-i", str(p)])
         lab = f"[mt{k}{tag}]"
-        self.fc.append(f"[{i}:v]scale={self.W}:{self.H}:flags=bicubic,format=gray,gblur=sigma=1.2,"
-                       f"trim=start={s - s0:.3f},setpts=PTS-STARTPTS+{s:.3f}/TB{lab}")
+        self.fc.append(f"[{i}:v]setpts=PTS-STARTPTS+{s:.3f}/TB,scale={self.W}:{self.H}:flags=bicubic,format=gray,gblur=sigma=1.2{lab}")
+        return lab
+
+    cm: str = ""  # render.py's colour-match chain (timeline enable windows), applied to base_cut copies too
+
+    def base_cut(self, s: float, e: float, lab: str) -> str:
+        """[s, e] of the base file as its OWN input (seeked), timed on the timeline. Use this instead of cut(split of the
+        live stream) for layers drawn first / late in a long video: a split of the main stream whose branch starts at
+        50 s makes ffmpeg hold every frame before it in memory (GBs), and the whole final pass crawls or stalls."""
+        i = self.add_input(["-ss", f"{max(0.0, s):.3f}", "-t", f"{e - s + 0.2:.3f}", "-i", str(self.base)])
+        self.fc.append(f"[{i}:v]fps={self.fps},scale={self.W}:{self.H},setpts=PTS-STARTPTS+{max(0.0, s):.3f}/TB"
+                       f"{',' + self.cm if self.cm else ''},trim=end={e:.3f}{lab}")
         return lab
 
     def cut(self, src: str, s: float, e: float, lab: str) -> str:
@@ -730,7 +742,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     fd = float(o.get("fade", 0.25))
     if t == "outline":
         return outline(o, k, vlast, cx, s, e, fd)
-    if t in ("freeze", "loopback", "facecam", "leak", "spinwhip", "zoomblur", "tumble"):  # built from stills / the base file, no copy of the live stream needed
+    if t in ("freeze", "loopback", "facecam", "leak", "spinwhip", "zoomblur", "tumble", "whip", "glitch", "zoomthru"):  # built from stills / the base file, no copy of the live stream needed
         clean = None
     else:
         fc.append(f"{vlast}split=2[vk{k}][cl{k}]")
@@ -897,7 +909,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         amt = float(o.get("amount", 0.6))
         sg = 1 if o.get("dir", "left") == "left" else -1
         a0, a1 = max(1e-3, at - s), max(1e-3, e - at)
-        l = cx.cut(clean, s, e, f"[wp{k}]")
+        l = cx.base_cut(s, e, f"[wp{k}]")
         # mirror-tile the frame so the moving crop never runs out of picture
         fc.append(f"{l}split=3[wa{k}][wb{k}][wc{k}];[wb{k}]hflip[wbf{k}];[wc{k}]hflip[wcf{k}];"
                   f"[wbf{k}][wa{k}][wcf{k}]hstack=3[wt{k}]")
@@ -1018,7 +1030,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
     if t == "glitch":
         import random
         rnd = random.Random(int(s * 1000))
-        l = cx.cut(clean, s, e, f"[gl{k}]")
+        l = cx.base_cut(s, e, f"[gl{k}]")
         step = float(o.get("step", 0.067))
         cuts = []
         a = s
@@ -1062,7 +1074,7 @@ def apply(o: dict, k: int, vlast: str, cx: Ctx) -> str:
         tt = f"(on/{cx.fps}+{s:.4f})"
         z = (f"if(lt({tt},{at:.4f}),1+{A - 1:.3f}*pow(on/{n0:.2f},2),"
              f"{A:.3f}-{A - 1:.3f}*(1-pow(1-min(1,(on-{n0:.2f})/{n1:.2f}),2)))")
-        l = cx.cut(clean, s, e, f"[zt{k}]")
+        l = cx.base_cut(s, e, f"[zt{k}]")
         fc.append(f"{l}scale={W * 2}:{H * 2}:flags=bicubic,zoompan=z='{z}':x='(iw-iw/zoom)*{fx_}':y='(ih-ih/zoom)*{fy_}':d=1:"
                   f"s={W}x{H}:fps={cx.fps},tmix=frames=3,setpts=PTS-STARTPTS+{s:.3f}/TB,format=yuv420p[zo{k}]")
         return _over(cx, vlast, f"[zo{k}]", s, e, k, "t")
