@@ -119,6 +119,9 @@ def grade_filters(g) -> list[str]:
                    f"saturation={g.get('saturation', 1)}:gamma={g.get('gamma', 1)}")
     if g.get("temperature"):
         out.append(f"colortemperature=temperature={g['temperature']}:mix={g.get('temperature_mix', 0.6)}")
+    if g.get("mixer"):  # per-channel gains [r, g, b], e.g. [1.02, 0.98, 1.0] takes a green cast out (baked, so mattes match)
+        r_, g_, b_ = g["mixer"]
+        out.append(f"colorchannelmixer=rr={r_}:gg={g_}:bb={b_}")
     if g.get("vibrance"):
         out.append(f"vibrance=intensity={g['vibrance']}")
     if g.get("vignette"):
@@ -252,7 +255,7 @@ def color_match_chain(plan: dict, clips: list[dict], starts: list[float], total:
     rg = sum(R["mean"]) / 3
     out = []
     for i, (c, S) in enumerate(zip(clips, stats)):
-        if not S:
+        if not S or c.get("color_match") is False:  # per clip opt-out: night / interior shots keep their own exposure
             continue
         a, b = starts[i], starts[i] + c["_dur"]
         g = math.log(max(0.05, target)) / math.log(min(0.95, max(0.05, S["med"])))
