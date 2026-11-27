@@ -920,6 +920,63 @@ def zoom_follow(clips: list[dict], starts: list[float], s: float, e: float, anch
     return out
 
 
+def wordstack_fit(props: dict, W: int) -> dict:
+    """Measure a WordStack lockup with the real font files (PIL) and size its lines so nothing leaves the frame: the
+    key line, the lead words and the tail words each fit inside max_w (default 0.86) of the width, also at the
+    biggest camera-follow scale. Returns props + fitted=True, key_size / pre_size / post_size in px."""
+    import math
+    from PIL import ImageFont
+    root = Path(__file__).resolve().parent.parent
+    fam = str(props.get("font", "GEO"))
+    kw, tw = int(props.get("key_weight", 700)), int(props.get("thin_weight", 300))
+    loc = root / "motion" / "public" / "fonts" / "local"
+
+    def face(weight):
+        if fam == "MON":
+            f = ImageFont.truetype(str(root / "assets" / "fonts" / "Montserrat-VF.ttf"), 100)
+            try:
+                f.set_variation_by_axes([max(100, min(900, weight))])
+            except Exception:
+                pass
+            return f
+        if fam == "GEO" and (loc / "nexa-bold.ttf").exists():
+            return ImageFont.truetype(str(loc / ("nexa-bold.ttf" if weight >= 500 else "nexa-light.ttf")), 100)
+        return ImageFont.truetype(str(root / "assets" / "fonts" / ("BeVietnamPro-ExtraBold.ttf" if weight >= 500 else "BeVietnamPro-Medium.ttf")), 100)
+
+    def width100(text, f, track_em):  # width at 100 px, with the CSS letter-spacing of the comp
+        if not text:
+            return 0.0
+        l, _, r, _ = f.getbbox(text)
+        return (r - l) + track_em * 100 * len(text)
+
+    words = [dict(q, w=str(q.get("w", ""))) for q in props.get("words", [])]
+    ki = next((i for i, q in enumerate(words) if q.get("k")), -1)
+    key = [q for q in words if q.get("k")]
+    pre = words[:ki] if ki >= 0 else words
+    post = words[ki + len(key):] if ki >= 0 else []
+    cam = props.get("cam") or []
+    grow = max([1.0] + [float(c[2]) for c in cam])
+    safe = W * float(props.get("max_w", 0.86)) / grow
+    K = float(props.get("key_size", 170))
+    if key:
+        kt = " ".join(q["w"] for q in key)
+        tilt = abs(float(props.get("tilt", -9)))
+        w1 = width100(kt, face(kw), -0.03) / 100 + 0.12 + 0.9 * math.tan(math.radians(tilt))  # + side padding + slant
+        K = min(K, safe / w1)
+    thin = face(tw)
+
+    def line(ws, cap):
+        if not ws:
+            return 0.0
+        t = " ".join(q["w"] for q in ws)
+        w1 = width100(t, thin, 0.02) / 100 + 0.22 * (len(ws) - 1) * 0.6 + 0.1
+        return round(min(cap, safe / w1), 1)
+    out = dict(props, fitted=True, key_size=round(K, 1))
+    out["pre_size"] = line(pre, K * (0.6 if key else 0.62))
+    out["post_size"] = line(post, K * 0.42)
+    return out
+
+
 def music_beats(plan: dict, s: float, e: float, work: Path) -> list[float]:
     """Beat times (seconds from s) of the plan's music inside [s, e], via scripts/beats.py."""
     import subprocess
@@ -1023,6 +1080,8 @@ def prepare_motion(plan: dict, starts: list[float], total: float, canvas: dict, 
             fps_ = int(canvas.get("fps", 30))
             o["props"]["cam"] = (zoom_follow(plan["clips"], starts, s, e, anc, fps_, amt)
                                  or cam_track(work / "base.mp4", s, e, anc, fps_, work, amt))
+        if o.get("comp") == "WordStack" and not o["props"].get("fitted"):
+            o["props"] = wordstack_fit(o["props"], int(canvas["width"]))
         if o.get("comp") in SRC_COMPS and not o["props"].get("src"):  # comps that redraw the footage themselves (B&W outside, live face bubble)
             s, e = overlay_times(o, starts, total)
             kb = f"{(work / 'base.mp4').stat().st_mtime_ns}|{s:.3f}|{e:.3f}".encode()

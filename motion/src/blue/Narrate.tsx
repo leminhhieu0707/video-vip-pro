@@ -217,7 +217,7 @@ export const ExplainCanvas: React.FC<P> = ({duration, src, face = [0.5, 0.3], bu
  * global motion of the footage and fills `cam` [[dx, dy, scale] per frame].
  */
 export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, key_size = 170, grad = ['#FFE08A', '#FF8A1F'], ink = '#FFFFFF',
-  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe', cam, key_weight = 700, thin_weight = 300}) => {
+  max_w = 0.88, tilt = -9, font = 'GEO', accent, enter: mode = 'fly', key_in = 'strobe', cam, key_weight = 700, thin_weight = 300, fitted, pre_size, post_size}) => {
   const {frame, fps, t, W, H} = useT();
   const g = accent ? [accent, accent] : grad;
   const F = `${font}, BVP, sans-serif`;
@@ -225,9 +225,10 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
   const ki = words.findIndex((q: any) => q.k), has = ki >= 0;
   const pre = has ? words.slice(0, ki) : words, key = has ? words.filter((q: any) => q.k) : [], post = has ? words.slice(ki + key.length) : [];
   const ktxt = key.map((q: any) => q.w).join(' ');
-  const K = Math.min(key_size, (W * max_w) / Math.max(1, ktxt.length * 0.6));     // fit the key line to the frame
-  const preS = Math.min(K * 0.6, (W * max_w) / Math.max(1, pre.map((q: any) => q.w).join(' ').length * 0.5));
-  const postS = Math.min(K * 0.42, (W * max_w) / Math.max(1, post.map((q: any) => q.w).join(' ').length * 0.5));
+  // render.py measures every line with the real font files (fitted): exact sizes, nothing leaves the frame
+  const K = fitted ? key_size : Math.min(key_size, (W * max_w) / Math.max(1, ktxt.length * 0.6));
+  const preS = fitted && pre_size ? pre_size : Math.min(K * 0.6, (W * max_w) / Math.max(1, pre.map((q: any) => q.w).join(' ').length * 0.5));
+  const postS = fitted && post_size ? post_size : Math.min(K * 0.42, (W * max_w) / Math.max(1, post.map((q: any) => q.w).join(' ').length * 0.5));
   const out = mode === 'flicker' ? lerp(t, duration - 4 / fps, duration, 0, 1) : lerp(t, duration - 0.18, duration, 0, 1);
   const shadow = '0 6px 26px rgba(0,0,0,0.42), 0 1px 3px rgba(0,0,0,0.35)';
   const STROBE = [0.6, 1, 0.18, 0, 0.7, 0.73, 0, 0, 0.35, 0.4, 0, 0];
@@ -243,7 +244,8 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
         op = 0.35 + 0.65 * e;
         if (dir < 0) dy = -18 * (1 - e); else if (dir > 0) dx = 24 * (1 - e);
       }
-      return {p: k < 0 ? 0 : 1, style: {opacity: op * (1 - out), filter: glow ? `brightness(${(1 + 0.45 * glow).toFixed(2)}) drop-shadow(0 0 ${(16 * glow).toFixed(1)}px ${g[0]})` : '',
+      // p stays 1: a word that has not appeared yet keeps its final size and spacing (only hidden), so the lockup never shifts
+      return {p: 1, style: {opacity: op * (1 - out), filter: glow ? `brightness(${(1 + 0.45 * glow).toFixed(2)}) drop-shadow(0 0 ${(16 * glow).toFixed(1)}px ${g[0]})` : '',
         transform: `translate(${dx}px, ${dy - out * 14}px)`} as React.CSSProperties};
     }
     const p = lerp(t, st - 0.02, st + (heavy ? 0.26 : 0.2), 0, 1, (q) => 1 - Math.pow(1 - q, 3));
@@ -263,7 +265,7 @@ export const WordStack: React.FC<P> = ({duration, words = [], x = 0.5, y = 0.5, 
         return c ? `translate(${(c[0] * W).toFixed(1)}px, ${(c[1] * H).toFixed(1)}px) translate(-50%, -50%) scale(${c[2]})` : 'translate(-50%, -50%)';
       })()}}>
       {pre.length ? <div style={{display: 'flex', justifyContent: has ? 'flex-start' : 'center', paddingLeft: has ? K * 0.08 : 0, marginBottom: has ? -K * 0.12 : 0,
-        position: 'relative', zIndex: 1}}>{small(pre, has ? preS : K * 0.62, -1)}</div> : null}
+        position: 'relative', zIndex: 1}}>{small(pre, has || (fitted && pre_size) ? preS : K * 0.62, -1)}</div> : null}
       {has ? <div style={{display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2}}>
         {key.map((wd: any, i: number) => {
           const e = enter(wd.t ?? 0, 0, true);
