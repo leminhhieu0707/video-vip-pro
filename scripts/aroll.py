@@ -154,7 +154,9 @@ def main():
         f32 = work / "sync.f32"
         y.tofile(f32)
         run([FFMPEG, "-v", "error", "-y", "-i", str(pol), "-f", "f32le", "-ar", str(sr), "-ac", "2", "-i", str(f32),
-             "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-shortest", str(out)])
+             "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-t", f"{total:.3f}", str(out)])
+        # (was -shortest: with -c:v copy it cut the last ~5 video frames, so aroll.json "total" ran past the picture
+        #  and the last clip of the edit drifted out of lip sync)
 
     meta = {"src": out.name, "starts": starts, "total": total, "speed": SP,
             "cuts": [{**c, "start": st} for c, st in zip(spec["cuts"], starts)]}

@@ -258,9 +258,9 @@ const enterFade = (t: number) => interpolate(t, [0, 0.15], [0, 1], CL);
 /**
  * NeonTunnel: full-screen neon tunnel. props: items [{src, at}] (B-roll / screenshots shown in the flying phone), color
  * ('#FF5A1F'), logo (image), script ("Vậy"), text ("làm thế nào\ncó thể…?"), title (big line under the text, e.g. "VIDEO QUÁ ĐẸP?"),
- * titleAt (s), fly (s, 0.9).
+ * titleAt (s), fly (s, 0.9), card (false = tunnel only, e.g. as a moving background behind a cut-out speaker).
  */
-export const NeonTunnel: React.FC<P> = ({duration, items = [], color = '#FF5A1F', logo, script, text, title, titleAt = 0.6, fly = 0.9}) => {
+export const NeonTunnel: React.FC<P> = ({duration, items = [], color = '#FF5A1F', logo, script, text, title, titleAt = 0.6, fly = 0.9, card = true}) => {
   const {frame, fps, t, W, H} = useT();
   const cx = W / 2, cy = H * 0.52;
   const o = Math.min(enterFade(t), exit(frame, fps, duration, 0.2));
@@ -313,13 +313,13 @@ export const NeonTunnel: React.FC<P> = ({duration, items = [], color = '#FF5A1F'
     {title ? <div style={{position: 'absolute', top: H * (logo ? 0.35 : 0.25), left: 0, right: 0, textAlign: 'center'}}>
       <ScatterText text={title} at={titleAt} size={title.length > 14 ? 88 : 104} color="#FFF4D6" seed="nt" spread={0.6} />
     </div> : null}
-    <div style={{position: 'absolute', left: cx, top: cardY, width: cardW, height: cardH,
+    {card ? <div style={{position: 'absolute', left: cx, top: cardY, width: cardW, height: cardH,
       transform: `translate(-50%,-50%) perspective(1400px) scale(${0.04 + 0.96 * flyP}) rotateY(${(1 - flyP) * 40 + flip + Math.sin(t * 1.2) * 4}deg)`,
       borderRadius: 40, padding: 10, background: 'linear-gradient(160deg, #d9dde6, #8a8f9c)', boxShadow: `0 0 60px ${color}55, 0 40px 80px rgba(0,0,0,0.6)`}}>
       <div style={{width: '100%', height: '100%', borderRadius: 32, overflow: 'hidden', background: '#000'}}>
         {list.map((it, i) => i === curI ? <Sequence key={i} from={Math.round(it.at * fps)} layout="none"><Media s={it.src} /></Sequence> : null)}
       </div>
-    </div>
+    </div> : null}
   </AbsoluteFill>;
 };
 
